@@ -24,6 +24,9 @@ export function Header() {
         <Link href="/ngo-admin" className="text-sm font-medium text-gray-600 hover:text-black">
           NGO Admin
         </Link>
+        <Link href="/platform-admin" className="text-sm font-medium text-gray-600 hover:text-black">
+          Platform Admin
+        </Link>
         <ConnectWalletButton />
       </nav>
     </header>

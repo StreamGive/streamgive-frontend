@@ -21,12 +21,19 @@ export type WalletSignTransaction = (
   opts: { networkPassphrase: string; address?: string },
 ) => Promise<{ signedTxXdr: string; signerAddress?: string }>;
 
+/** SEP-53 generic message signing (distinct from signTransaction, which
+ * signs a Stellar transaction envelope). The wallet applies the
+ * "Stellar Signed Message:\n" prefix and SHA256 hashing itself before
+ * signing — callers just pass the plain message string. */
+export type WalletSignMessage = (message: string) => Promise<string>;
+
 type WalletContextValue = {
   address: string | null;
   connecting: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
   signTransaction: WalletSignTransaction;
+  signMessage: WalletSignMessage;
 };
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -89,9 +96,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [address],
   );
 
+  const signMessage: WalletSignMessage = useCallback(
+    async (message) => {
+      if (!address) {
+        throw new Error('No wallet connected');
+      }
+      // Encoding of `signedMessage` (base64 vs hex) isn't precisely
+      // documented — base64 is assumed here for consistency with
+      // signTransaction's signedTxXdr. If backend verification ever fails
+      // against a real wallet, check this first.
+      const { signedMessage } = await StellarWalletsKit.signMessage(message, { address });
+      return signedMessage;
+    },
+    [address],
+  );
+
   const value = useMemo(
-    () => ({ address, connecting, connect, disconnect, signTransaction }),
-    [address, connecting, connect, disconnect, signTransaction],
+    () => ({ address, connecting, connect, disconnect, signTransaction, signMessage }),
+    [address, connecting, connect, disconnect, signTransaction, signMessage],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
