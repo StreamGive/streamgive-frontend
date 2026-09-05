@@ -1,5 +1,13 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
 export type Ngo = {
   id: string;
   ownerAddress: string;
@@ -59,6 +67,45 @@ export async function getStreams(donor: string): Promise<Stream[]> {
   const res = await fetch(`${API_URL}/streams?donor=${encodeURIComponent(donor)}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch streams: ${res.status}`);
+  }
+  return res.json();
+}
+
+export type NgoApplicationInput = {
+  ownerAddress: string;
+  name: string;
+  description: string;
+  contactEmail: string;
+  website?: string;
+  country?: string;
+};
+
+export type NgoApplication = {
+  id: string;
+  ownerAddress: string;
+  name: string;
+  description: string;
+  website: string | null;
+  contactEmail: string;
+  country: string | null;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  reviewNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export async function submitNgoApplication(input: NgoApplicationInput): Promise<NgoApplication> {
+  const res = await fetch(`${API_URL}/ngo-applications`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+
+  if (res.status === 409) {
+    throw new ApiError('An application from this address is already pending review.', 409);
+  }
+  if (!res.ok) {
+    throw new ApiError('Failed to submit application.', res.status);
   }
   return res.json();
 }

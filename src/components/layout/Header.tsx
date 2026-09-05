@@ -18,6 +18,9 @@ export function Header() {
         <Link href="/impact" className="text-sm font-medium text-gray-600 hover:text-black">
           Impact
         </Link>
+        <Link href="/apply" className="text-sm font-medium text-gray-600 hover:text-black">
+          Apply as NGO
+        </Link>
         <ConnectWalletButton />
       </nav>
     </header>
