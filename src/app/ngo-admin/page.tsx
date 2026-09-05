@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
+import { EmbedSnippet } from '@/components/ngoAdmin/EmbedSnippet';
 import { WithdrawButton } from '@/components/ngoAdmin/WithdrawButton';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { getNgos, getStreams, type Ngo, type Stream } from '@/lib/api';
@@ -86,6 +87,8 @@ export default function NgoAdminPage() {
         {address && !loading && !loadError && ngo && (
           <>
             <p className="mt-2 text-gray-600">Managing streams for {ngo.name}.</p>
+
+            <EmbedSnippet ngoId={ngo.id} />
 
             {streams.length === 0 ? (
               <p className="mt-8 text-gray-600">No one has started a stream to you yet.</p>
