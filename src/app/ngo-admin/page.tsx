@@ -96,7 +96,7 @@ export default function NgoAdminPage() {
               <ul className="mt-8 space-y-4">
                 {streams.map((stream) => (
                   <li key={stream.id} className="rounded-lg border border-gray-200 p-6">
-                    <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="font-mono text-sm break-all">{stream.donor.address}</p>
                         <p className="mt-1 text-sm text-gray-500">

@@ -102,7 +102,7 @@ export function StreamControls({ stream, onChanged }: { stream: Stream; onChange
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <div className="flex shrink-0 gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <button
           type="button"
           disabled

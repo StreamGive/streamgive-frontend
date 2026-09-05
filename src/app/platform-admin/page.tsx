@@ -110,7 +110,7 @@ export default function PlatformAdminPage() {
           <ul className="mt-8 space-y-4">
             {applications.map((app) => (
               <li key={app.id} className="rounded-lg border border-gray-200 p-6">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="font-semibold">{app.name}</h2>
                     <p className="mt-1 text-sm text-gray-600">{app.description}</p>
