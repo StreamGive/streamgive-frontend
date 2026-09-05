@@ -1,16 +1,32 @@
-import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
+import Link from 'next/link';
 
-// Placeholder — the real landing page (mission, how-it-works) lands in a
-// later commit. This just confirms the scaffold, and now wallet
-// connection, render and wire up end to end.
+import { HowItWorks } from '@/components/landing/HowItWorks';
+import { Footer } from '@/components/layout/Footer';
+import { Header } from '@/components/layout/Header';
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4 p-24">
-      <h1 className="text-3xl font-bold">StreamGive</h1>
-      <p className="text-gray-500">
-        Recurring, streaming donations for verified NGOs on Stellar.
-      </p>
-      <ConnectWalletButton />
-    </main>
+    <>
+      <Header />
+      <main>
+        <section className="flex flex-col items-center gap-6 px-6 py-24 text-center sm:px-12">
+          <h1 className="max-w-2xl text-4xl font-bold sm:text-5xl">
+            Give as a stream, not a one-time click.
+          </h1>
+          <p className="max-w-xl text-gray-600">
+            StreamGive lets you support verified NGOs on Stellar with continuous, cancel-anytime
+            donations — transparent, on-chain, and instant.
+          </p>
+          <Link
+            href="/ngos"
+            className="rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800"
+          >
+            Explore NGOs
+          </Link>
+        </section>
+        <HowItWorks />
+      </main>
+      <Footer />
+    </>
   );
 }
