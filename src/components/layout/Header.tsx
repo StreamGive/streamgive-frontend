@@ -12,6 +12,9 @@ export function Header() {
         <Link href="/ngos" className="text-sm font-medium text-gray-600 hover:text-black">
           Explore NGOs
         </Link>
+        <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-black">
+          Dashboard
+        </Link>
         <ConnectWalletButton />
       </nav>
     </header>

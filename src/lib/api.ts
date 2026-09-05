@@ -38,3 +38,27 @@ export async function getNgo(id: string): Promise<NgoProfile | null> {
   }
   return res.json();
 }
+
+export type Stream = {
+  id: string;
+  onChainId: string;
+  tokenAddress: string;
+  rate: string;
+  balance: string;
+  withdrawn: string;
+  status: 'ACTIVE' | 'CANCELLED';
+  createdAt: string;
+  updatedAt: string;
+  donor: { address: string };
+  ngo: { id: string; name: string; ownerAddress: string };
+};
+
+/** Called client-side (it depends on the connected wallet address, which
+ * only exists in the browser), so no Next.js server-fetch caching options. */
+export async function getStreams(donor: string): Promise<Stream[]> {
+  const res = await fetch(`${API_URL}/streams?donor=${encodeURIComponent(donor)}`);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch streams: ${res.status}`);
+  }
+  return res.json();
+}
