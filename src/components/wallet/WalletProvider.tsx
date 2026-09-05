@@ -12,12 +12,21 @@ import {
   type ReactNode,
 } from 'react';
 
+/** SEP-43's standard signing-callback shape — also exactly what
+ * @stellar/stellar-sdk/contract's Client.from expects for its
+ * `signTransaction` option, so this can be passed straight through with
+ * no adapter at every contract-call site. */
+export type WalletSignTransaction = (
+  xdr: string,
+  opts: { networkPassphrase: string; address?: string },
+) => Promise<{ signedTxXdr: string; signerAddress?: string }>;
+
 type WalletContextValue = {
   address: string | null;
   connecting: boolean;
   connect: () => Promise<void>;
   disconnect: () => void;
-  signTransaction: (xdr: string, opts: { networkPassphrase: string }) => Promise<string>;
+  signTransaction: WalletSignTransaction;
 };
 
 const WalletContext = createContext<WalletContextValue | null>(null);
@@ -66,16 +75,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setAddress(null);
   }, []);
 
-  const signTransaction = useCallback(
-    async (xdr: string, opts: { networkPassphrase: string }): Promise<string> => {
-      if (!address) {
+  const signTransaction: WalletSignTransaction = useCallback(
+    async (xdr, opts) => {
+      const signerAddress = opts.address ?? address;
+      if (!signerAddress) {
         throw new Error('No wallet connected');
       }
-      const { signedTxXdr } = await StellarWalletsKit.signTransaction(xdr, {
+      return StellarWalletsKit.signTransaction(xdr, {
         networkPassphrase: opts.networkPassphrase,
-        address,
+        address: signerAddress,
       });
-      return signedTxXdr;
     },
     [address],
   );

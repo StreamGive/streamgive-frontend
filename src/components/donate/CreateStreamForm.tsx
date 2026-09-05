@@ -3,6 +3,8 @@
 import { useState, type FormEvent } from 'react';
 
 import { useWallet } from '@/components/wallet/WalletProvider';
+import { getDonationVaultClient } from '@/lib/donationVaultClient';
+import { getNativeAssetAddress } from '@/lib/stellar';
 
 const DURATIONS = [
   { label: '1 week', seconds: 7 * 24 * 60 * 60 },
@@ -16,14 +18,18 @@ const DURATIONS = [
 const TOKEN_DECIMALS = 7;
 
 type TokenChoice = 'native' | 'custom';
+type SubmitState = 'idle' | 'signing' | 'success' | 'error';
 
-export function CreateStreamForm({ ngoId }: { ngoId: string }) {
-  const { address, connect } = useWallet();
+export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
+  const { address, connect, signTransaction } = useWallet();
 
   const [tokenChoice, setTokenChoice] = useState<TokenChoice>('native');
   const [customToken, setCustomToken] = useState('');
   const [amount, setAmount] = useState('');
   const [durationSeconds, setDurationSeconds] = useState(DURATIONS[1].seconds);
+  const [submitState, setSubmitState] = useState<SubmitState>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [streamId, setStreamId] = useState<string | null>(null);
 
   const amountNumber = Number(amount);
   const isAmountValid = Number.isFinite(amountNumber) && amountNumber > 0;
@@ -35,14 +41,46 @@ export function CreateStreamForm({ ngoId }: { ngoId: string }) {
   const isRateValid = rateRaw !== null && rateRaw > 0n;
 
   const isTokenValid = tokenChoice === 'native' || customToken.trim().length > 0;
-  const canSubmit = isAmountValid && isRateValid && isTokenValid;
+  const canSubmit = isAmountValid && isRateValid && isTokenValid && submitState !== 'signing';
 
-  function handleSubmit(event: FormEvent): void {
+  async function handleSubmit(event: FormEvent): Promise<void> {
     event.preventDefault();
-    // Transaction building + wallet signing lands in the next commit —
-    // for now this is just the form producing valid, contract-shaped
-    // deposit/rate values.
-    console.log('create_stream inputs', { ngoId, tokenChoice, customToken, depositRaw, rateRaw });
+    if (!canSubmit || !address || depositRaw === null || rateRaw === null) {
+      return;
+    }
+
+    setSubmitState('signing');
+    setErrorMessage(null);
+
+    try {
+      const tokenAddress =
+        tokenChoice === 'native' ? getNativeAssetAddress() : customToken.trim();
+
+      const client = await getDonationVaultClient(address, signTransaction);
+      const tx = await client.create_stream({
+        donor: address,
+        ngo: ngoAddress,
+        token: tokenAddress,
+        deposit: depositRaw,
+        rate: rateRaw,
+      });
+      const { result } = await tx.signAndSend();
+
+      setStreamId(String(result));
+      setSubmitState('success');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Something went wrong.');
+      setSubmitState('error');
+    }
+  }
+
+  if (submitState === 'success' && streamId !== null) {
+    return (
+      <div className="rounded-lg border border-green-200 bg-green-50 p-6">
+        <p className="font-medium text-green-800">Stream started!</p>
+        <p className="mt-1 text-sm text-green-700">Stream #{streamId} is now active.</p>
+      </div>
+    );
   }
 
   if (!address) {
@@ -61,7 +99,7 @@ export function CreateStreamForm({ ngoId }: { ngoId: string }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-md space-y-6">
+    <form onSubmit={(event) => void handleSubmit(event)} className="max-w-md space-y-6">
       <fieldset>
         <legend className="text-sm font-medium">Token</legend>
         <div className="mt-2 flex gap-4 text-sm">
@@ -131,12 +169,16 @@ export function CreateStreamForm({ ngoId }: { ngoId: string }) {
         </p>
       )}
 
+      {submitState === 'error' && errorMessage && (
+        <p className="text-sm text-red-600">{errorMessage}</p>
+      )}
+
       <button
         type="submit"
         disabled={!canSubmit}
         className="w-full rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
       >
-        Review & Sign
+        {submitState === 'signing' ? 'Confirm in your wallet…' : 'Review & Sign'}
       </button>
     </form>
   );

@@ -9,12 +9,16 @@ export default async function DonatePage({ params }: { params: Promise<{ id: str
   const { id } = await params;
 
   let ngoName: string;
+  let ngoAddress: string;
   try {
     const ngo = await getNgo(id);
     if (!ngo) {
       notFound();
     }
     ngoName = ngo.name;
+    // The on-chain call needs the NGO's Stellar address, not its internal
+    // database id — `id` above is only a route/lookup key into our API.
+    ngoAddress = ngo.ownerAddress;
   } catch {
     return (
       <>
@@ -35,7 +39,7 @@ export default async function DonatePage({ params }: { params: Promise<{ id: str
       <main className="px-6 py-16 sm:px-12">
         <h1 className="text-2xl font-bold">Start streaming to {ngoName}</h1>
         <div className="mt-8">
-          <CreateStreamForm ngoId={id} />
+          <CreateStreamForm ngoAddress={ngoAddress} />
         </div>
       </main>
       <Footer />
