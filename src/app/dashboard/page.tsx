@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
-import { useWallet } from '@/components/wallet/WalletProvider';
+import { StreamControls } from '@/components/dashboard/StreamControls';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
+import { useWallet } from '@/components/wallet/WalletProvider';
 import { getStreams, type Stream } from '@/lib/api';
 import { formatAmount } from '@/lib/format';
 
@@ -15,7 +16,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
-  useEffect(() => {
+  const refresh = useCallback(() => {
     if (!address) {
       setStreams([]);
       return;
@@ -28,6 +29,10 @@ export default function DashboardPage() {
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, [address]);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
 
   const totalCommitted = streams.reduce(
     (sum, s) => sum + BigInt(s.balance) + BigInt(s.withdrawn),
@@ -74,6 +79,11 @@ export default function DashboardPage() {
 
         {address && !loading && !loadError && streams.length > 0 && (
           <>
+            {/* Cancel/modify-rate confirm on-chain immediately, but the
+                numbers below come from the backend's indexer, which polls
+                on an interval — so a change here can lag a few seconds
+                behind the wallet confirmation. Proper loading/status
+                feedback for that gap is a later, dedicated commit. */}
             <dl className="mt-8 grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-2">
               <div>
                 <dt className="text-sm text-gray-500">Total committed</dt>
@@ -102,25 +112,7 @@ export default function DashboardPage() {
                       </p>
                     </div>
                     {stream.status === 'ACTIVE' && (
-                      <div className="flex shrink-0 gap-2">
-                        {/* Wired up in the next commit. */}
-                        <button
-                          type="button"
-                          disabled
-                          title="Coming soon"
-                          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
-                        >
-                          Top up
-                        </button>
-                        <button
-                          type="button"
-                          disabled
-                          title="Coming soon"
-                          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium disabled:opacity-50"
-                        >
-                          Cancel
-                        </button>
-                      </div>
+                      <StreamControls stream={stream} onChanged={refresh} />
                     )}
                   </div>
                 </li>
