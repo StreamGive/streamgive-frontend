@@ -15,6 +15,9 @@ export function Header() {
         <Link href="/dashboard" className="text-sm font-medium text-gray-600 hover:text-black">
           Dashboard
         </Link>
+        <Link href="/impact" className="text-sm font-medium text-gray-600 hover:text-black">
+          Impact
+        </Link>
         <ConnectWalletButton />
       </nav>
     </header>
