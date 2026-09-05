@@ -63,8 +63,12 @@ export type Stream = {
 
 /** Called client-side (it depends on the connected wallet address, which
  * only exists in the browser), so no Next.js server-fetch caching options. */
-export async function getStreams(donor: string): Promise<Stream[]> {
-  const res = await fetch(`${API_URL}/streams?donor=${encodeURIComponent(donor)}`);
+export async function getStreams(filter: { donor?: string; ngo?: string }): Promise<Stream[]> {
+  const params = new URLSearchParams();
+  if (filter.donor) params.set('donor', filter.donor);
+  if (filter.ngo) params.set('ngo', filter.ngo);
+
+  const res = await fetch(`${API_URL}/streams?${params.toString()}`);
   if (!res.ok) {
     throw new Error(`Failed to fetch streams: ${res.status}`);
   }

@@ -24,7 +24,7 @@ export default function DashboardPage() {
 
     setLoading(true);
     setLoadError(false);
-    getStreams(address)
+    getStreams({ donor: address })
       .then(setStreams)
       .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
