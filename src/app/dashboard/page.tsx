@@ -59,7 +59,11 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {address && loading && <p className="mt-8 text-gray-500">Loading your streams…</p>}
+        {address && loading && (
+          <p role="status" className="mt-8 text-gray-500">
+            Loading your streams…
+          </p>
+        )}
 
         {address && !loading && loadError && (
           <p className="mt-8 text-red-600">

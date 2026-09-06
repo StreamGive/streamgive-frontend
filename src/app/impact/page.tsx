@@ -78,7 +78,11 @@ export default function ImpactPage() {
           </p>
         )}
 
-        {!loadError && !impact && <p className="mt-8 text-gray-500">Loading…</p>}
+        {!loadError && !impact && (
+          <p role="status" className="mt-8 text-gray-500">
+            Loading…
+          </p>
+        )}
 
         {!loadError && impact && (
           <dl className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-4">

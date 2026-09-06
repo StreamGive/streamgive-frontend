@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 
 import { CreateStreamForm } from '@/components/donate/CreateStreamForm';
@@ -5,7 +6,15 @@ import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { getNgo } from '@/lib/api';
 
-export default async function DonatePage({ params }: { params: Promise<{ id: string }> }) {
+type Props = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const ngo = await getNgo(id).catch(() => null);
+  return { title: ngo ? `Donate to ${ngo.name}` : 'NGO not found' };
+}
+
+export default async function DonatePage({ params }: Props) {
   const { id } = await params;
 
   let ngoName: string;

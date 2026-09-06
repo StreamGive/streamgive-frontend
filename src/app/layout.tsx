@@ -16,9 +16,27 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+const DESCRIPTION = 'Recurring, streaming donations for verified NGOs on Stellar.';
+
 export const metadata: Metadata = {
-  title: 'StreamGive',
-  description: 'Recurring, streaming donations for verified NGOs on Stellar.',
+  title: {
+    default: 'StreamGive',
+    // Child routes set just their own segment (e.g. "Explore NGOs") and
+    // get this composed automatically, rather than repeating "StreamGive"
+    // in every page's own metadata.
+    template: '%s — StreamGive',
+  },
+  description: DESCRIPTION,
+  openGraph: {
+    title: 'StreamGive',
+    description: DESCRIPTION,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'StreamGive',
+    description: DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

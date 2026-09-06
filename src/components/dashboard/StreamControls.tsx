@@ -79,6 +79,7 @@ export function StreamControls({ stream, onChanged }: { stream: Stream; onChange
         <select
           value={durationSeconds}
           onChange={(event) => setDurationSeconds(Number(event.target.value))}
+          aria-label="New duration to stream the remaining balance over"
           className="rounded-md border border-gray-300 px-2 py-1 text-sm"
         >
           {DURATIONS.map((d) => (

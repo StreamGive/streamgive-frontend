@@ -100,7 +100,11 @@ export default function PlatformAdminPage() {
           </div>
         )}
 
-        {address && loading && <p className="mt-8 text-gray-500">Loading…</p>}
+        {address && loading && (
+          <p role="status" className="mt-8 text-gray-500">
+            Loading…
+          </p>
+        )}
 
         {address && error && <p className="mt-8 text-red-600">{error}</p>}
 
@@ -121,7 +125,7 @@ export default function PlatformAdminPage() {
                       {app.website ? ` · ${app.website}` : ''}
                       {app.country ? ` · ${app.country}` : ''}
                     </p>
-                    <p className="mt-1 font-mono text-xs break-all text-gray-400">
+                    <p className="mt-1 font-mono text-xs break-all text-gray-500">
                       {app.ownerAddress}
                     </p>
                   </div>

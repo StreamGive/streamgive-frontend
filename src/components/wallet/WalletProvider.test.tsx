@@ -78,8 +78,14 @@ describe('wallet connect flow', () => {
     const user = userEvent.setup();
     renderButton();
 
-    const connected = await screen.findByRole('button', { name: /GAAA…AAAA/ });
-    await user.click(connected);
+    // Looked up by role alone, not accessible name: the connected button's
+    // aria-label carries the full address for screen readers, while its
+    // visible text content is the truncated form — matched by text in the
+    // other tests above.
+    await waitFor(() => {
+      expect(screen.getByRole('button')).toHaveTextContent('GAAA…AAAA');
+    });
+    await user.click(screen.getByRole('button'));
 
     expect(await screen.findByRole('button', { name: /connect wallet/i })).toBeInTheDocument();
   });

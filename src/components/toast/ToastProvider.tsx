@@ -38,7 +38,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            role="status"
+            // Errors interrupt (assertive) since they need attention now;
+            // success/info are announced without interrupting other speech.
+            role={toast.type === 'error' ? 'alert' : 'status'}
             className={`max-w-sm rounded-md px-4 py-3 text-sm font-medium shadow-lg ${TOAST_STYLES[toast.type]}`}
           >
             {toast.message}

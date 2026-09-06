@@ -1,3 +1,4 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -5,7 +6,25 @@ import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { getNgo, type NgoProfile } from '@/lib/api';
 
-export default async function NgoProfilePage({ params }: { params: Promise<{ id: string }> }) {
+type Props = { params: Promise<{ id: string }> };
+
+// Next.js dedupes identical fetch() calls made during the same request, so
+// this doesn't cost a second network round-trip on top of the page itself.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { id } = await params;
+  const ngo = await getNgo(id).catch(() => null);
+
+  if (!ngo) {
+    return { title: 'NGO not found' };
+  }
+
+  return {
+    title: ngo.name,
+    description: `Support ${ngo.name} with a recurring, streaming donation on Stellar.`,
+  };
+}
+
+export default async function NgoProfilePage({ params }: Props) {
   const { id } = await params;
 
   let ngo: NgoProfile | null;

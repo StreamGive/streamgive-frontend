@@ -1,8 +1,14 @@
+import type { Metadata } from 'next';
 import Link from 'next/link';
 
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { getNgos, type Ngo } from '@/lib/api';
+
+export const metadata: Metadata = {
+  title: 'Explore NGOs',
+  description: 'Browse verified NGOs accepting recurring, streaming donations on Stellar.',
+};
 
 export default async function NgosPage() {
   let ngos: Ngo[] = [];

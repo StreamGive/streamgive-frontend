@@ -41,10 +41,12 @@ export function Header() {
           type="button"
           onClick={() => setMenuOpen((open) => !open)}
           aria-expanded={menuOpen}
+          aria-controls="mobile-nav"
           aria-label="Toggle menu"
           className="rounded-md p-2 hover:bg-gray-100 md:hidden"
         >
           <svg
+            aria-hidden="true"
             className="h-6 w-6"
             fill="none"
             viewBox="0 0 24 24"
@@ -61,7 +63,7 @@ export function Header() {
       </div>
 
       {menuOpen && (
-        <nav className="mt-4 flex flex-col gap-4 md:hidden">
+        <nav id="mobile-nav" className="mt-4 flex flex-col gap-4 md:hidden">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
