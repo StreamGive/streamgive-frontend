@@ -79,11 +79,6 @@ export default function DashboardPage() {
 
         {address && !loading && !loadError && streams.length > 0 && (
           <>
-            {/* Cancel/modify-rate confirm on-chain immediately, but the
-                numbers below come from the backend's indexer, which polls
-                on an interval — so a change here can lag a few seconds
-                behind the wallet confirmation. Proper loading/status
-                feedback for that gap is a later, dedicated commit. */}
             <dl className="mt-8 grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-2">
               <div>
                 <dt className="text-sm text-gray-500">Total committed</dt>

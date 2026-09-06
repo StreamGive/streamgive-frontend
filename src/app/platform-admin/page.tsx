@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
+import { useToast } from '@/components/toast/ToastProvider';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import type { NgoApplication } from '@/lib/api';
 import { listNgoApplications, reviewNgoApplication } from '@/lib/adminApi';
@@ -11,6 +12,7 @@ import { getNgoRegistryClient } from '@/lib/ngoRegistryClient';
 
 export default function PlatformAdminPage() {
   const { address, connect, signMessage, signTransaction } = useWallet();
+  const { showToast } = useToast();
   const [applications, setApplications] = useState<NgoApplication[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,6 @@ export default function PlatformAdminPage() {
   async function handleApprove(app: NgoApplication): Promise<void> {
     if (!address) return;
     setBusyId(app.id);
-    setError(null);
     try {
       // On-chain first: this is what actually flips Ngo.verified once the
       // indexer picks up the resulting event. If the wallet rejects or the
@@ -52,9 +53,10 @@ export default function PlatformAdminPage() {
       await tx.signAndSend();
 
       await reviewNgoApplication(address, signMessage, app.id, 'approve');
+      showToast('success', `${app.name} approved.`);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      showToast('error', err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setBusyId(null);
     }
@@ -63,12 +65,12 @@ export default function PlatformAdminPage() {
   async function handleReject(app: NgoApplication): Promise<void> {
     if (!address) return;
     setBusyId(app.id);
-    setError(null);
     try {
       await reviewNgoApplication(address, signMessage, app.id, 'reject');
+      showToast('info', `${app.name} rejected.`);
       await refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong.');
+      showToast('error', err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
       setBusyId(null);
     }
