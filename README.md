@@ -88,6 +88,11 @@ after editing `.env`; in Docker, rebuild the image rather than swapping
 - [streamgive-backend](https://github.com/streamgive/streamgive-backend) — indexer & API
 - [streamgive-docs](https://github.com/streamgive/streamgive-docs) — documentation
 
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the accessibility checklist to
+run through before adding new interactive UI.
+
 ## Status
 
 Early development.
