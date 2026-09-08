@@ -3,7 +3,8 @@ import Link from 'next/link';
 
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
-import { getNgos, type Ngo } from '@/lib/api';
+import { getNgo, getNgos, type NgoProfile } from '@/lib/api';
+import { formatAmount } from '@/lib/format';
 
 export const metadata: Metadata = {
   title: 'Explore NGOs',
@@ -11,11 +12,15 @@ export const metadata: Metadata = {
 };
 
 export default async function NgosPage() {
-  let ngos: Ngo[] = [];
+  let ngos: NgoProfile[] = [];
   let loadError = false;
 
   try {
-    ngos = await getNgos();
+    const list = await getNgos();
+    // No aggregate stats on the list endpoint — fetch each profile for its
+    // stats. Same N+1 tradeoff already accepted on the platform impact page.
+    const profiles = await Promise.all(list.map((ngo) => getNgo(ngo.id)));
+    ngos = profiles.filter((profile): profile is NgoProfile => profile !== null);
   } catch {
     loadError = true;
   }
@@ -40,7 +45,32 @@ export default async function NgosPage() {
           <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {ngos.map((ngo) => (
               <li key={ngo.id} className="rounded-lg border border-gray-200 p-6">
-                <h2 className="font-semibold">{ngo.name}</h2>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-semibold">{ngo.name}</h2>
+                  {ngo.verified && (
+                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+                      Verified
+                    </span>
+                  )}
+                </div>
+
+                <dl className="mt-4 grid grid-cols-3 gap-3">
+                  <div>
+                    <dt className="text-xs text-gray-500">Committed</dt>
+                    <dd className="text-sm font-semibold">
+                      {formatAmount(ngo.stats.totalCommitted)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">Streams</dt>
+                    <dd className="text-sm font-semibold">{ngo.stats.activeStreamCount}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-gray-500">Donors</dt>
+                    <dd className="text-sm font-semibold">{ngo.stats.donorCount}</dd>
+                  </div>
+                </dl>
+
                 <Link
                   href={`/ngos/${ngo.id}`}
                   className="mt-4 inline-block text-sm font-medium text-black underline"
