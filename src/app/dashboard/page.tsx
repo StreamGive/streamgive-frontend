@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { StreamControls } from '@/components/dashboard/StreamControls';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
+import { StreamDetailsModal } from '@/components/streams/StreamDetailsModal';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { getStreams, type Stream } from '@/lib/api';
 import { formatAmount } from '@/lib/format';
@@ -15,6 +16,7 @@ export default function DashboardPage() {
   const [streams, setStreams] = useState<Stream[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [detailsStream, setDetailsStream] = useState<Stream | null>(null);
 
   const refresh = useCallback(() => {
     if (!address) {
@@ -110,9 +112,18 @@ export default function DashboardPage() {
                         {formatAmount(stream.balance)} · Withdrawn {formatAmount(stream.withdrawn)}
                       </p>
                     </div>
-                    {stream.status === 'ACTIVE' && (
-                      <StreamControls stream={stream} onChanged={refresh} />
-                    )}
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDetailsStream(stream)}
+                        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+                      >
+                        View details
+                      </button>
+                      {stream.status === 'ACTIVE' && (
+                        <StreamControls stream={stream} onChanged={refresh} />
+                      )}
+                    </div>
                   </div>
                 </li>
               ))}
@@ -121,6 +132,10 @@ export default function DashboardPage() {
         )}
       </main>
       <Footer />
+
+      {detailsStream && (
+        <StreamDetailsModal stream={detailsStream} onClose={() => setDetailsStream(null)} />
+      )}
     </>
   );
 }

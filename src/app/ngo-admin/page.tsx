@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { EmbedSnippet } from '@/components/ngoAdmin/EmbedSnippet';
 import { WithdrawButton } from '@/components/ngoAdmin/WithdrawButton';
+import { StreamDetailsModal } from '@/components/streams/StreamDetailsModal';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { getNgos, getStreams, type Ngo, type Stream } from '@/lib/api';
 import { formatAmount } from '@/lib/format';
@@ -18,6 +19,7 @@ export default function NgoAdminPage() {
   const [streams, setStreams] = useState<Stream[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState(false);
+  const [detailsStream, setDetailsStream] = useState<Stream | null>(null);
 
   const refresh = useCallback(async () => {
     if (!address) {
@@ -108,12 +110,21 @@ export default function NgoAdminPage() {
                           {formatAmount(stream.balance)} · Withdrawn {formatAmount(stream.withdrawn)}
                         </p>
                       </div>
-                      {stream.status === 'ACTIVE' && (
-                        <WithdrawButton
-                          streamOnChainId={stream.onChainId}
-                          onWithdrawn={() => void refresh()}
-                        />
-                      )}
+                      <div className="flex flex-wrap items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDetailsStream(stream)}
+                          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+                        >
+                          View details
+                        </button>
+                        {stream.status === 'ACTIVE' && (
+                          <WithdrawButton
+                            streamOnChainId={stream.onChainId}
+                            onWithdrawn={() => void refresh()}
+                          />
+                        )}
+                      </div>
                     </div>
                   </li>
                 ))}
@@ -123,6 +134,10 @@ export default function NgoAdminPage() {
         )}
       </main>
       <Footer />
+
+      {detailsStream && (
+        <StreamDetailsModal stream={detailsStream} onClose={() => setDetailsStream(null)} />
+      )}
     </>
   );
 }
