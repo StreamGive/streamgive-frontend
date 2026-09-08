@@ -1,5 +1,8 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+/** Thrown by API calls that need callers to branch on the HTTP status
+ * (e.g. 409 conflict vs. other failures) rather than just knowing a
+ * request failed. */
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -17,6 +20,13 @@ export type Ngo = {
   updatedAt: string;
 };
 
+/**
+ * Fetches the list of all NGOs.
+ *
+ * Server-side fetch cached for 30s via Next.js `revalidate`.
+ *
+ * @throws {Error} if the response is not ok.
+ */
 export async function getNgos(): Promise<Ngo[]> {
   const res = await fetch(`${API_URL}/ngos`, { next: { revalidate: 30 } });
   if (!res.ok) {
@@ -34,8 +44,17 @@ export type NgoProfile = Ngo & {
   };
 };
 
-/** Returns null for a genuine 404 (distinct from a thrown network/server
- * error) so the caller can render "not found" instead of an error state. */
+/**
+ * Fetches a single NGO's profile, including donation stats.
+ *
+ * Server-side fetch cached for 30s via Next.js `revalidate`.
+ *
+ * @param id - NGO id.
+ * @returns The profile, or `null` for a genuine 404 (distinct from a
+ * thrown network/server error) so the caller can render "not found"
+ * instead of an error state.
+ * @throws {Error} if the response is not ok and not a 404.
+ */
 export async function getNgo(id: string): Promise<NgoProfile | null> {
   const res = await fetch(`${API_URL}/ngos/${id}`, { next: { revalidate: 30 } });
   if (res.status === 404) {
@@ -61,8 +80,15 @@ export type Stream = {
   ngo: { id: string; name: string; ownerAddress: string };
 };
 
-/** Called client-side (it depends on the connected wallet address, which
- * only exists in the browser), so no Next.js server-fetch caching options. */
+/**
+ * Fetches streams matching the given filter. Pass `donor` and/or `ngo` to
+ * narrow results; an empty filter returns all streams.
+ *
+ * Called client-side (it depends on the connected wallet address, which
+ * only exists in the browser), so no Next.js server-fetch caching options.
+ *
+ * @throws {Error} if the response is not ok.
+ */
 export async function getStreams(filter: { donor?: string; ngo?: string }): Promise<Stream[]> {
   const params = new URLSearchParams();
   if (filter.donor) params.set('donor', filter.donor);
@@ -98,6 +124,13 @@ export type NgoApplication = {
   updatedAt: string;
 };
 
+/**
+ * Submits a new NGO application for review.
+ *
+ * @throws {ApiError} with status 409 if an application from this
+ * `ownerAddress` is already pending review, or with the response's status
+ * for any other non-ok response.
+ */
 export async function submitNgoApplication(input: NgoApplicationInput): Promise<NgoApplication> {
   const res = await fetch(`${API_URL}/ngo-applications`, {
     method: 'POST',

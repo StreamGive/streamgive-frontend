@@ -49,6 +49,47 @@ function ensureKitInitialized(): void {
   kitInitialized = true;
 }
 
+/**
+ * Provides wallet state (`address`, `connecting`) and wallet actions
+ * (`connect`, `disconnect`, `signTransaction`, `signMessage`) to the app via
+ * `useWallet()`. Mount this once near the root of the app.
+ *
+ * ## Connection lifecycle
+ *
+ * 1. **Mount / page load.** On mount, the provider lazily initializes the
+ *    underlying `StellarWalletsKit` (once per page, via
+ *    `ensureKitInitialized`) and calls `getAddress()` to silently restore a
+ *    session the user already authorized in a previous visit — the wallet
+ *    extension keeps its own authorization state independent of this app.
+ *    If nothing is authorized, `getAddress()` rejects and `address` simply
+ *    stays `null`; this is the expected steady state for a first-time
+ *    visitor, not an error. `connecting` is NOT set during this restore —
+ *    it's a synchronous-feeling background check, not a user-initiated
+ *    action — so UI that gates on `connecting` alone won't reflect this
+ *    step. Consumers that need to distinguish "still restoring" from
+ *    "confirmed disconnected" should treat `address === null` as
+ *    ambiguous until they have another signal (e.g. their own effect
+ *    completing).
+ * 2. **User-initiated connect.** Calling `connect()` sets `connecting: true`,
+ *    opens the wallet-selection auth modal, and on success sets `address`.
+ *    `connecting` is always reset to `false` in a `finally`, including when
+ *    the user closes the modal without picking a wallet or the modal
+ *    throws — callers should surface that rejection themselves if they want
+ *    user-facing error feedback, since `WalletProvider` does not.
+ * 3. **Connected.** While `address` is set, `signTransaction` and
+ *    `signMessage` are usable; both throw synchronously (as a rejected
+ *    promise) if called with no address available.
+ * 4. **Disconnect.** `disconnect()` only clears local `address` state. The
+ *    underlying wallet extension has no app-callable disconnect as of
+ *    writing, so it stays authorized; calling `connect()` again after
+ *    `disconnect()` re-opens the auth modal rather than silently
+ *    re-restoring the old session.
+ *
+ * Feature code that needs a wallet should read `address`/`connecting` from
+ * `useWallet()` and treat `address === null` as "not connected" regardless
+ * of which lifecycle step produced it — there's no separate "restoring"
+ * state exposed today.
+ */
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
