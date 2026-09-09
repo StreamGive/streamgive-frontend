@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { getDonationVaultClient } from '@/lib/donationVaultClient';
+import { parseAmount, TOKEN_DECIMALS } from '@/lib/format';
 import { getNativeAssetAddress } from '@/lib/stellar';
 
 const DURATIONS = [
@@ -12,10 +13,6 @@ const DURATIONS = [
   { label: '3 months', seconds: 90 * 24 * 60 * 60 },
   { label: '1 year', seconds: 365 * 24 * 60 * 60 },
 ];
-
-// Every Stellar Asset Contract token (native XLM included) uses 7 decimal
-// places — that's fixed by the protocol, not something per-asset to look up.
-const TOKEN_DECIMALS = 7;
 
 type TokenChoice = 'native' | 'custom';
 type SubmitState = 'idle' | 'signing' | 'success' | 'error';
@@ -31,12 +28,9 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [streamId, setStreamId] = useState<string | null>(null);
 
-  const amountNumber = Number(amount);
-  const isAmountValid = Number.isFinite(amountNumber) && amountNumber > 0;
+  const depositRaw = parseAmount(amount);
+  const isAmountValid = depositRaw !== null;
 
-  const depositRaw = isAmountValid
-    ? BigInt(Math.round(amountNumber * 10 ** TOKEN_DECIMALS))
-    : null;
   const rateRaw = depositRaw !== null ? depositRaw / BigInt(durationSeconds) : null;
   const isRateValid = rateRaw !== null && rateRaw > 0n;
 
