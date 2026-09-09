@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import { CopyAddressButton } from '@/components/common/CopyAddressButton';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { useToast } from '@/components/toast/ToastProvider';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import type { NgoApplication } from '@/lib/api';
 import { listNgoApplications, reviewNgoApplication } from '@/lib/adminApi';
+import { truncateAddress } from '@/lib/format';
 import { getNgoRegistryClient } from '@/lib/ngoRegistryClient';
 
 export default function PlatformAdminPage() {
@@ -125,9 +127,12 @@ export default function PlatformAdminPage() {
                       {app.website ? ` · ${app.website}` : ''}
                       {app.country ? ` · ${app.country}` : ''}
                     </p>
-                    <p className="mt-1 font-mono text-xs break-all text-gray-500">
-                      {app.ownerAddress}
-                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <p className="font-mono text-xs text-gray-500">
+                        {truncateAddress(app.ownerAddress)}
+                      </p>
+                      <CopyAddressButton address={app.ownerAddress} />
+                    </div>
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <button
