@@ -20,7 +20,7 @@ const DURATIONS = [
 // success toast so it doesn't look like nothing happened.
 const INDEXING_LAG_NOTE = 'may take a few seconds to show below';
 
-type Mode = 'idle' | 'modifying' | 'busy';
+type Mode = 'idle' | 'modifying' | 'confirmingCancel' | 'busy';
 
 export function StreamControls({ stream, onChanged }: { stream: Stream; onChanged: () => void }) {
   const { address, signTransaction } = useWallet();
@@ -71,6 +71,28 @@ export function StreamControls({ stream, onChanged }: { stream: Stream; onChange
     } finally {
       setMode('idle');
     }
+  }
+
+  if (mode === 'confirmingCancel') {
+    return (
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <span className="text-sm text-gray-600">Cancel this stream? This can&apos;t be undone.</span>
+        <button
+          type="button"
+          onClick={() => void handleCancel()}
+          className="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700"
+        >
+          Yes, cancel
+        </button>
+        <button
+          type="button"
+          onClick={() => setMode('idle')}
+          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium"
+        >
+          Never mind
+        </button>
+      </div>
+    );
   }
 
   if (mode === 'modifying') {
@@ -126,7 +148,7 @@ export function StreamControls({ stream, onChanged }: { stream: Stream; onChange
       </button>
       <button
         type="button"
-        onClick={() => void handleCancel()}
+        onClick={() => setMode('confirmingCancel')}
         disabled={mode === 'busy'}
         className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
       >
