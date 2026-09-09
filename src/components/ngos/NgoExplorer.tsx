@@ -11,17 +11,37 @@ import { formatAmount } from '@/lib/format';
 const PAGE_SIZE = 9;
 
 export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
+  const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   if (ngos.length === 0) {
     return <p className="mt-4 text-gray-600">No verified NGOs yet.</p>;
   }
 
-  const visibleNgos = ngos.slice(0, visibleCount);
-  const hasMore = visibleCount < ngos.length;
+  const filteredNgos = ngos.filter((ngo) =>
+    ngo.name.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+  );
+  const visibleNgos = filteredNgos.slice(0, visibleCount);
+  const hasMore = visibleCount < filteredNgos.length;
+
+  function handleSearchChange(value: string): void {
+    setSearchQuery(value);
+    setVisibleCount(PAGE_SIZE);
+  }
 
   return (
     <>
+      <label className="mt-8 block max-w-sm">
+        <span className="sr-only">Search NGOs by name</span>
+        <input
+          type="search"
+          value={searchQuery}
+          onChange={(event) => handleSearchChange(event.target.value)}
+          placeholder="Search NGOs by name…"
+          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+        />
+      </label>
+
       <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {visibleNgos.map((ngo) => (
           <li key={ngo.id} className="rounded-lg border border-gray-200 p-6">
