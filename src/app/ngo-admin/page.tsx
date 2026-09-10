@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
+import { CopyAddressButton } from '@/components/common/CopyAddressButton';
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
 import { EmbedSnippet } from '@/components/ngoAdmin/EmbedSnippet';
@@ -10,7 +11,7 @@ import { WithdrawButton } from '@/components/ngoAdmin/WithdrawButton';
 import { StreamDetailsModal } from '@/components/streams/StreamDetailsModal';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { getNgos, getStreams, type Ngo, type Stream } from '@/lib/api';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, truncateAddress } from '@/lib/format';
 
 export default function NgoAdminPage() {
   const { address, connect } = useWallet();
@@ -104,7 +105,10 @@ export default function NgoAdminPage() {
                   <li key={stream.id} className="rounded-lg border border-gray-200 p-6">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="font-mono text-sm break-all">{stream.donor.address}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono text-sm">{truncateAddress(stream.donor.address)}</p>
+                          <CopyAddressButton address={stream.donor.address} />
+                        </div>
                         <p className="mt-1 text-sm text-gray-500">
                           {stream.status === 'ACTIVE' ? 'Active' : 'Cancelled'} · Balance{' '}
                           {formatAmount(stream.balance)} · Withdrawn {formatAmount(stream.withdrawn)}

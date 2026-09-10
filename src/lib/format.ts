@@ -20,4 +20,7 @@ export function parseAmount(input: string): bigint | null {
     return null;
   }
   return BigInt(Math.round(value * 10 ** TOKEN_DECIMALS));
+/** Shortens a wallet/contract address to its first and last 4 characters. */
+export function truncateAddress(address: string): string {
+  return `${address.slice(0, 4)}…${address.slice(-4)}`;
 }
