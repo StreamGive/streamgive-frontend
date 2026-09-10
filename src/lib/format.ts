@@ -10,3 +10,8 @@ export function formatAmount(raw: string): string {
     maximumFractionDigits: 7,
   });
 }
+
+/** Shortens a wallet/contract address to its first and last 4 characters. */
+export function truncateAddress(address: string): string {
+  return `${address.slice(0, 4)}…${address.slice(-4)}`;
+}
