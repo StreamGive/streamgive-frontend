@@ -19,7 +19,7 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="border-b border-gray-200 px-6 py-4 sm:px-12">
+    <header className="border-b border-gray-200 px-6 py-4 sm:px-12 dark:border-gray-800">
       <div className="flex items-center justify-between">
         <Link
           href="/"
@@ -35,7 +35,7 @@ export function Header() {
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium text-gray-600 hover:text-black"
+              className="text-sm font-medium text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white"
             >
               {link.label}
             </Link>
@@ -49,7 +49,7 @@ export function Header() {
           aria-expanded={menuOpen}
           aria-controls="mobile-nav"
           aria-label="Toggle menu"
-          className="rounded-md p-2 hover:bg-gray-100 md:hidden"
+          className="rounded-md p-2 hover:bg-gray-100 md:hidden dark:hover:bg-gray-800"
         >
           <svg
             aria-hidden="true"
@@ -75,7 +75,7 @@ export function Header() {
               key={link.href}
               href={link.href}
               onClick={() => setMenuOpen(false)}
-              className="text-sm font-medium text-gray-600 hover:text-black"
+              className="text-sm font-medium text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white"
             >
               {link.label}
             </Link>

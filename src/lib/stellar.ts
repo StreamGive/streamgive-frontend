@@ -30,3 +30,12 @@ export const USDC_ISSUER =
 export function getUsdcAssetAddress(): string {
   return new Asset('USDC', USDC_ISSUER).contractId(NETWORK_PASSPHRASE);
 }
+
+const PUBLIC_NETWORK_PASSPHRASE = 'Public Global Stellar Network ; September 2015';
+
+/** Builds a stellar.expert URL for an account (wallet/NGO) or contract
+ * (token) address, pointed at whichever network NETWORK_PASSPHRASE selects. */
+export function explorerUrl(kind: 'account' | 'contract', id: string): string {
+  const network = NETWORK_PASSPHRASE === PUBLIC_NETWORK_PASSPHRASE ? 'public' : 'testnet';
+  return `https://stellar.expert/explorer/${network}/${kind}/${id}`;
+}

@@ -22,11 +22,11 @@ export function HowItWorks() {
       <ol className="mt-8 grid gap-8 sm:grid-cols-3">
         {steps.map((step, index) => (
           <li key={step.title}>
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-sm font-bold text-white">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-sm font-bold text-white dark:bg-white dark:text-black">
               {index + 1}
             </div>
             <h3 className="mt-4 font-semibold">{step.title}</h3>
-            <p className="mt-1 text-sm text-gray-600">{step.description}</p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">{step.description}</p>
           </li>
         ))}
       </ol>

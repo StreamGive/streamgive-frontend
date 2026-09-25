@@ -14,8 +14,11 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 let nextId = 0;
 const TOAST_DURATION_MS = 5000;
 
+// bg-green-600 on white text is ~3.4:1 — under AA's 4.5:1 for normal text —
+// so success uses a darker shade instead of a dark: override, since these
+// are solid floating boxes rather than page background/text pairs.
 const TOAST_STYLES: Record<ToastType, string> = {
-  success: 'bg-green-600 text-white',
+  success: 'bg-green-700 text-white',
   error: 'bg-red-600 text-white',
   info: 'bg-gray-900 text-white',
 };

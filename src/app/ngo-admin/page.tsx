@@ -61,12 +61,14 @@ export default function NgoAdminPage() {
         <h1 className="text-2xl font-bold">NGO admin</h1>
 
         {!address && (
-          <div className="mt-8 rounded-lg border border-gray-200 p-6 text-center">
-            <p className="text-gray-600">Connect your NGO&apos;s wallet to manage your streams.</p>
+          <div className="mt-8 rounded-lg border border-gray-200 p-6 text-center dark:border-gray-800">
+            <p className="text-gray-600 dark:text-gray-400">
+              Connect your NGO&apos;s wallet to manage your streams.
+            </p>
             <button
               type="button"
               onClick={() => void connect()}
-              className="mt-4 rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800"
+              className="mt-4 rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
             >
               Connect Wallet
             </button>
@@ -74,13 +76,13 @@ export default function NgoAdminPage() {
         )}
 
         {address && loading && (
-          <p role="status" className="mt-8 text-gray-500">
+          <p role="status" className="mt-8 text-gray-500 dark:text-gray-400">
             Loading…
           </p>
         )}
 
         {address && !loading && loadError && (
-          <p className="mt-8 text-red-600">
+          <p className="mt-8 text-red-600 dark:text-red-400">
             Couldn&apos;t reach the StreamGive API. Is the backend running?
           </p>
         )}
@@ -107,23 +109,30 @@ export default function NgoAdminPage() {
 
         {address && !loading && !loadError && ngo?.verified && (
           <>
-            <p className="mt-2 text-gray-600">Managing streams for {ngo.name}.</p>
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              Managing streams for {ngo.name}.
+            </p>
 
             <EmbedSnippet ngoId={ngo.id} />
 
             {streams.length === 0 ? (
-              <p className="mt-8 text-gray-600">No one has started a stream to you yet.</p>
+              <p className="mt-8 text-gray-600 dark:text-gray-400">
+                No one has started a stream to you yet.
+              </p>
             ) : (
               <ul className="mt-8 space-y-4">
                 {streams.map((stream) => (
-                  <li key={stream.id} className="rounded-lg border border-gray-200 p-6">
+                  <li
+                    key={stream.id}
+                    className="rounded-lg border border-gray-200 p-6 dark:border-gray-800"
+                  >
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-mono text-sm">{truncateAddress(stream.donor.address)}</p>
                           <CopyAddressButton address={stream.donor.address} />
                         </div>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                           {stream.status === 'ACTIVE' ? 'Active' : 'Cancelled'} · Balance{' '}
                           {formatAmount(stream.balance)} · Withdrawn {formatAmount(stream.withdrawn)}
                         </p>
@@ -132,7 +141,7 @@ export default function NgoAdminPage() {
                         <button
                           type="button"
                           onClick={() => setDetailsStream(stream)}
-                          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+                          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                         >
                           View details
                         </button>

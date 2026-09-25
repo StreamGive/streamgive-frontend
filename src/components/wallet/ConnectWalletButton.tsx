@@ -14,7 +14,7 @@ export function ConnectWalletButton() {
       <button
         type="button"
         onClick={disconnect}
-        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
         title={address}
         aria-label={`Connected as ${address}. Click to disconnect.`}
       >
@@ -28,7 +28,7 @@ export function ConnectWalletButton() {
       type="button"
       onClick={() => void connect()}
       disabled={connecting}
-      className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+      className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200"
     >
       {connecting ? 'Connecting…' : 'Connect Wallet'}
     </button>

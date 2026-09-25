@@ -26,7 +26,7 @@ export function CopyAddressButton({ address }: { address: string }) {
       onClick={() => void handleCopy()}
       title={address}
       aria-label={`Copy address ${address}`}
-      className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium hover:bg-gray-50"
+      className="rounded-md border border-gray-300 px-2 py-1 text-xs font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
     >
       {copied ? 'Copied!' : 'Copy'}
     </button>

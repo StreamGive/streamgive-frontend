@@ -117,20 +117,20 @@ export function StreamControls({ stream, onChanged }: { stream: Stream; onChange
           onChange={(event) => setTopUpAmount(event.target.value)}
           placeholder="Amount"
           aria-label="Amount to add to this stream"
-          className="w-28 rounded-md border border-gray-300 px-2 py-1 text-sm"
+          className="w-28 rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-gray-700"
         />
         <button
           type="button"
           onClick={() => void handleTopUp()}
           disabled={topUpAmountRaw === null}
-          className="rounded-md bg-black px-3 py-1 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-md bg-black px-3 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
         >
           Confirm
         </button>
         <button
           type="button"
           onClick={() => setMode('idle')}
-          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium"
+          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium dark:border-gray-700"
         >
           Back
         </button>
@@ -141,18 +141,20 @@ export function StreamControls({ stream, onChanged }: { stream: Stream; onChange
   if (mode === 'confirmingCancel') {
     return (
       <div className="flex flex-wrap items-center justify-end gap-2">
-        <span className="text-sm text-gray-600">Cancel this stream? This can&apos;t be undone.</span>
+        <span className="text-sm text-gray-600 dark:text-gray-400">
+          Cancel this stream? This can&apos;t be undone.
+        </span>
         <button
           type="button"
           onClick={() => void handleCancel()}
-          className="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700"
+          className="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
         >
           Yes, cancel
         </button>
         <button
           type="button"
           onClick={() => setMode('idle')}
-          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium"
+          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium dark:border-gray-700"
         >
           Never mind
         </button>
@@ -167,7 +169,7 @@ export function StreamControls({ stream, onChanged }: { stream: Stream; onChange
           value={durationSeconds}
           onChange={(event) => setDurationSeconds(Number(event.target.value))}
           aria-label="New duration to stream the remaining balance over"
-          className="rounded-md border border-gray-300 px-2 py-1 text-sm"
+          className="rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
         >
           {DURATIONS.map((d) => (
             <option key={d.seconds} value={d.seconds}>
@@ -178,14 +180,14 @@ export function StreamControls({ stream, onChanged }: { stream: Stream; onChange
         <button
           type="button"
           onClick={() => void handleModifyRate()}
-          className="rounded-md bg-black px-3 py-1 text-sm font-medium text-white"
+          className="rounded-md bg-black px-3 py-1 text-sm font-medium text-white dark:bg-white dark:text-black"
         >
           Confirm
         </button>
         <button
           type="button"
           onClick={() => setMode('idle')}
-          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium"
+          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium dark:border-gray-700"
         >
           Back
         </button>

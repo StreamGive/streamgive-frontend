@@ -74,21 +74,23 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
 
   if (submitState === 'success' && streamId !== null) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-6">
-        <p className="font-medium text-green-800">Stream started!</p>
-        <p className="mt-1 text-sm text-green-700">Stream #{streamId} is now active.</p>
+      <div className="rounded-lg border border-green-200 bg-green-50 p-6 dark:border-green-900 dark:bg-green-950">
+        <p className="font-medium text-green-800 dark:text-green-300">Stream started!</p>
+        <p className="mt-1 text-sm text-green-700 dark:text-green-400">
+          Stream #{streamId} is now active.
+        </p>
       </div>
     );
   }
 
   if (!address) {
     return (
-      <div className="rounded-lg border border-gray-200 p-6 text-center">
-        <p className="text-gray-600">Connect your wallet to start a stream.</p>
+      <div className="rounded-lg border border-gray-200 p-6 text-center dark:border-gray-800">
+        <p className="text-gray-600 dark:text-gray-400">Connect your wallet to start a stream.</p>
         <button
           type="button"
           onClick={() => void connect()}
-          className="mt-4 rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800"
+          className="mt-4 rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
         >
           Connect Wallet
         </button>
@@ -135,7 +137,7 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
             value={customToken}
             onChange={(event) => setCustomToken(event.target.value)}
             placeholder="Token contract address (C...)"
-            className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+            className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
           />
         )}
       </fieldset>
@@ -149,7 +151,7 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
           value={amount}
           onChange={(event) => setAmount(event.target.value)}
           placeholder="100"
-          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
         />
       </label>
 
@@ -158,7 +160,7 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
         <select
           value={durationSeconds}
           onChange={(event) => setDurationSeconds(Number(event.target.value))}
-          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
         >
           {DURATIONS.map((d) => (
             <option key={d.seconds} value={d.seconds}>
@@ -169,7 +171,7 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
       </label>
 
       {isAmountValid && rateRaw !== null && (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           {isRateValid
             ? `That's roughly ${(Number(rateRaw) / 10 ** TOKEN_DECIMALS).toFixed(7)} per second.`
             : 'That amount is too small to stream over this duration — try a shorter one.'}
@@ -177,13 +179,13 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
       )}
 
       {submitState === 'error' && errorMessage && (
-        <p className="text-sm text-red-600">{errorMessage}</p>
+        <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
       )}
 
       <button
         type="submit"
         disabled={!canSubmit}
-        className="w-full rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+        className="w-full rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200"
       >
         {submitState === 'signing' ? 'Confirm in your wallet…' : 'Review & Sign'}
       </button>

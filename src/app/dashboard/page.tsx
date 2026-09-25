@@ -9,7 +9,18 @@ import { Header } from '@/components/layout/Header';
 import { StreamDetailsModal } from '@/components/streams/StreamDetailsModal';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { getStreams, type Stream } from '@/lib/api';
+import { buildDonationHistoryCsv } from '@/lib/csv';
 import { formatAmount } from '@/lib/format';
+
+function downloadDonationHistoryCsv(streams: Stream[]): void {
+  const blob = new Blob([buildDonationHistoryCsv(streams)], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'streamgive-donations.csv';
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function DashboardPage() {
   const { address, connect } = useWallet();
@@ -55,12 +66,12 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-bold">Your donations</h1>
 
         {!address && (
-          <div className="mt-8 rounded-lg border border-gray-200 p-6 text-center">
-            <p className="text-gray-600">Connect your wallet to see your streams.</p>
+          <div className="mt-8 rounded-lg border border-gray-200 p-6 text-center dark:border-gray-800">
+            <p className="text-gray-600 dark:text-gray-400">Connect your wallet to see your streams.</p>
             <button
               type="button"
               onClick={() => void connect()}
-              className="mt-4 rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800"
+              className="mt-4 rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
             >
               Connect Wallet
             </button>
@@ -68,19 +79,19 @@ export default function DashboardPage() {
         )}
 
         {address && loading && (
-          <p role="status" className="mt-8 text-gray-500">
+          <p role="status" className="mt-8 text-gray-500 dark:text-gray-400">
             Loading your streams…
           </p>
         )}
 
         {address && !loading && loadError && (
-          <p className="mt-8 text-red-600">
+          <p className="mt-8 text-red-600 dark:text-red-400">
             Couldn&apos;t reach the StreamGive API. Is the backend running?
           </p>
         )}
 
         {address && !loading && !loadError && streams.length === 0 && (
-          <p className="mt-8 text-gray-600">
+          <p className="mt-8 text-gray-600 dark:text-gray-400">
             You haven&apos;t started any streams yet.{' '}
             <Link href="/ngos" className="underline">
               Explore NGOs
@@ -91,20 +102,35 @@ export default function DashboardPage() {
 
         {address && !loading && !loadError && streams.length > 0 && (
           <>
-            <dl className="mt-8 grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-2">
-              <div>
-                <dt className="text-sm text-gray-500">Total committed</dt>
-                <dd className="text-lg font-semibold">{formatAmount(totalCommitted.toString())}</dd>
-              </div>
-              <div>
-                <dt className="text-sm text-gray-500">Active streams</dt>
-                <dd className="text-lg font-semibold">{activeCount}</dd>
-              </div>
-            </dl>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <dl className="grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-2">
+                <div>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">Total committed</dt>
+                  <dd className="text-lg font-semibold">
+                    {formatAmount(totalCommitted.toString())}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-gray-500 dark:text-gray-400">Active streams</dt>
+                  <dd className="text-lg font-semibold">{activeCount}</dd>
+                </div>
+              </dl>
+
+              <button
+                type="button"
+                onClick={() => downloadDonationHistoryCsv(streams)}
+                className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              >
+                Export CSV
+              </button>
+            </div>
 
             <ul className="mt-8 space-y-4">
               {streams.map((stream) => (
-                <li key={stream.id} className="rounded-lg border border-gray-200 p-6">
+                <li
+                  key={stream.id}
+                  className="rounded-lg border border-gray-200 p-6 dark:border-gray-800"
+                >
                   <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <Link
@@ -113,7 +139,7 @@ export default function DashboardPage() {
                       >
                         {stream.ngo.name}
                       </Link>
-                      <p className="mt-1 text-sm text-gray-500">
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         {stream.status === 'ACTIVE' ? 'Active' : 'Cancelled'} · Balance{' '}
                         {formatAmount(stream.balance)} · Withdrawn {formatAmount(stream.withdrawn)}
                       </p>
@@ -122,7 +148,7 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => setDetailsStream(stream)}
-                        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50"
+                        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
                       >
                         View details
                       </button>

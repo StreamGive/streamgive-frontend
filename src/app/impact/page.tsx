@@ -35,7 +35,7 @@ export default function ImpactPage() {
       <Header />
       <main className="px-6 py-16 sm:px-12">
         <h1 className="text-2xl font-bold">Platform impact</h1>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Updates automatically every {POLL_INTERVAL_MS / 1000} seconds.
         </p>
 
@@ -54,7 +54,7 @@ export default function ImpactPage() {
         )}
 
         {!loadError && !impact && (
-          <p role="status" className="mt-8 text-gray-500">
+          <p role="status" className="mt-8 text-gray-500 dark:text-gray-400">
             Loading…
           </p>
         )}
@@ -62,23 +62,23 @@ export default function ImpactPage() {
         {impact && (
           <dl className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-4">
             <div>
-              <dt className="text-sm text-gray-500">Total committed</dt>
+              <dt className="text-sm text-gray-500 dark:text-gray-400">Total committed</dt>
               <dd className="text-2xl font-bold">
                 {formatAmount(impact.totalCommitted.toString())}
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-500">Withdrawn by NGOs</dt>
+              <dt className="text-sm text-gray-500 dark:text-gray-400">Withdrawn by NGOs</dt>
               <dd className="text-2xl font-bold">
                 {formatAmount(impact.totalWithdrawn.toString())}
               </dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-500">Active streams</dt>
+              <dt className="text-sm text-gray-500 dark:text-gray-400">Active streams</dt>
               <dd className="text-2xl font-bold">{impact.activeStreams}</dd>
             </div>
             <div>
-              <dt className="text-sm text-gray-500">Verified NGOs</dt>
+              <dt className="text-sm text-gray-500 dark:text-gray-400">Verified NGOs</dt>
               <dd className="text-2xl font-bold">{impact.ngoCount}</dd>
             </div>
           </dl>

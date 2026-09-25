@@ -33,7 +33,7 @@ export default async function DonatePage({ params }: Props) {
       <>
         <Header />
         <main className="px-6 py-16 sm:px-12">
-          <p className="text-red-600">
+          <p className="text-red-600 dark:text-red-400">
             Couldn&apos;t reach the StreamGive API. Is the backend running?
           </p>
         </main>

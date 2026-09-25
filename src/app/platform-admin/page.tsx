@@ -89,19 +89,19 @@ export default function PlatformAdminPage() {
       <Header />
       <main className="px-6 py-16 sm:px-12">
         <h1 className="text-2xl font-bold">Platform admin</h1>
-        <p className="mt-2 max-w-xl text-sm text-gray-600">
+        <p className="mt-2 max-w-xl text-sm text-gray-600 dark:text-gray-400">
           Review pending NGO applications. Only the wallet configured as the platform&apos;s
-          <code className="mx-1 rounded bg-gray-100 px-1">ADMIN_ADDRESS</code>
+          <code className="mx-1 rounded bg-gray-100 px-1 dark:bg-gray-800">ADMIN_ADDRESS</code>
           can act here — approving both calls the on-chain registry and records the review.
         </p>
 
         {!address && (
-          <div className="mt-8 rounded-lg border border-gray-200 p-6 text-center">
-            <p className="text-gray-600">Connect the platform admin wallet.</p>
+          <div className="mt-8 rounded-lg border border-gray-200 p-6 text-center dark:border-gray-800">
+            <p className="text-gray-600 dark:text-gray-400">Connect the platform admin wallet.</p>
             <button
               type="button"
               onClick={() => void connect()}
-              className="mt-4 rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800"
+              className="mt-4 rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 dark:bg-white dark:text-black dark:hover:bg-gray-200"
             >
               Connect Wallet
             </button>
@@ -109,32 +109,37 @@ export default function PlatformAdminPage() {
         )}
 
         {address && loading && (
-          <p role="status" className="mt-8 text-gray-500">
+          <p role="status" className="mt-8 text-gray-500 dark:text-gray-400">
             Loading…
           </p>
         )}
 
-        {address && error && <p className="mt-8 text-red-600">{error}</p>}
+        {address && error && <p className="mt-8 text-red-600 dark:text-red-400">{error}</p>}
 
         {address && !loading && !error && applications.length === 0 && (
-          <p className="mt-8 text-gray-600">No pending applications.</p>
+          <p className="mt-8 text-gray-600 dark:text-gray-400">No pending applications.</p>
         )}
 
         {address && !loading && applications.length > 0 && (
           <ul className="mt-8 space-y-4">
             {applications.map((app) => (
-              <li key={app.id} className="rounded-lg border border-gray-200 p-6">
+              <li
+                key={app.id}
+                className="rounded-lg border border-gray-200 p-6 dark:border-gray-800"
+              >
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <h2 className="font-semibold">{app.name}</h2>
-                    <p className="mt-1 text-sm text-gray-600">{app.description}</p>
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                      {app.description}
+                    </p>
+                    <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       {app.contactEmail}
                       {app.website ? ` · ${app.website}` : ''}
                       {app.country ? ` · ${app.country}` : ''}
                     </p>
                     <div className="mt-1 flex items-center gap-2">
-                      <p className="font-mono text-xs text-gray-500">
+                      <p className="font-mono text-xs text-gray-500 dark:text-gray-400">
                         {truncateAddress(app.ownerAddress)}
                       </p>
                       <CopyAddressButton address={app.ownerAddress} />
@@ -145,7 +150,7 @@ export default function PlatformAdminPage() {
                       type="button"
                       onClick={() => void handleApprove(app)}
                       disabled={busyId === app.id}
-                      className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                      className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200"
                     >
                       {busyId === app.id ? 'Working…' : 'Approve'}
                     </button>
@@ -153,7 +158,7 @@ export default function PlatformAdminPage() {
                       type="button"
                       onClick={() => void handleReject(app)}
                       disabled={busyId === app.id}
-                      className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+                      className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
                     >
                       Reject
                     </button>
