@@ -34,7 +34,15 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
   const rateRaw = depositRaw !== null ? depositRaw / BigInt(durationSeconds) : null;
   const isRateValid = rateRaw !== null && rateRaw > 0n;
 
-  const isTokenValid = tokenChoice !== 'custom' || customToken.trim().length > 0;
+  const STELLAR_CONTRACT_RE = /^C[A-Z2-7]{55}$/;
+  const customTokenTrimmed = customToken.trim();
+  const isCustomTokenFormatValid =
+    tokenChoice !== 'custom' ||
+    customTokenTrimmed.length === 0 ||
+    STELLAR_CONTRACT_RE.test(customTokenTrimmed);
+  const isTokenValid =
+    tokenChoice !== 'custom' ||
+    (customTokenTrimmed.length > 0 && STELLAR_CONTRACT_RE.test(customTokenTrimmed));
   const canSubmit = isAmountValid && isRateValid && isTokenValid && submitState !== 'signing';
 
   async function handleSubmit(event: FormEvent): Promise<void> {
@@ -132,13 +140,20 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
           </label>
         </div>
         {tokenChoice === 'custom' && (
-          <input
-            type="text"
-            value={customToken}
-            onChange={(event) => setCustomToken(event.target.value)}
-            placeholder="Token contract address (C...)"
-            className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
-          />
+          <>
+            <input
+              type="text"
+              value={customToken}
+              onChange={(event) => setCustomToken(event.target.value)}
+              placeholder="Token contract address (C...)"
+              className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+            />
+            {!isCustomTokenFormatValid && (
+              <p className="mt-1 text-sm text-amber-600 dark:text-amber-400">
+                Must be a Stellar contract address starting with C followed by 55 uppercase letters or digits 2–7.
+              </p>
+            )}
+          </>
         )}
       </fieldset>
 
