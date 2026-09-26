@@ -19,6 +19,7 @@ export default function PlatformAdminPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
 
   const refresh = useCallback(async () => {
     if (!address) return;
@@ -60,7 +61,7 @@ export default function PlatformAdminPage() {
       const tx = await client.approve_ngo({ ngo_owner: app.ownerAddress });
       await tx.signAndSend();
 
-      await reviewNgoApplication(address, signMessage, app.id, 'approve');
+      await reviewNgoApplication(address, signMessage, app.id, 'approve', reviewNotes[app.id]);
       showToast('success', `${app.name} approved.`);
       await refresh();
     } catch (err) {
@@ -74,7 +75,7 @@ export default function PlatformAdminPage() {
     if (!address) return;
     setBusyId(app.id);
     try {
-      await reviewNgoApplication(address, signMessage, app.id, 'reject');
+      await reviewNgoApplication(address, signMessage, app.id, 'reject', reviewNotes[app.id]);
       showToast('info', `${app.name} rejected.`);
       await refresh();
     } catch (err) {
@@ -153,23 +154,39 @@ export default function PlatformAdminPage() {
                       })}
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void handleApprove(app)}
-                      disabled={busyId === app.id}
-                      className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200"
-                    >
-                      {busyId === app.id ? 'Working…' : 'Approve'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void handleReject(app)}
-                      disabled={busyId === app.id}
-                      className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
-                    >
-                      Reject
-                    </button>
+                  <div className="flex w-full shrink-0 flex-col gap-2 sm:w-64">
+                    <label className="block">
+                      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                        Review note (optional)
+                      </span>
+                      <textarea
+                        value={reviewNotes[app.id] ?? ''}
+                        onChange={(event) =>
+                          setReviewNotes((notes) => ({ ...notes, [app.id]: event.target.value }))
+                        }
+                        rows={2}
+                        placeholder="Why is this approved or rejected?"
+                        className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+                      />
+                    </label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => void handleApprove(app)}
+                        disabled={busyId === app.id}
+                        className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+                      >
+                        {busyId === app.id ? 'Working…' : 'Approve'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleReject(app)}
+                        disabled={busyId === app.id}
+                        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </div>
                 </div>
               </li>

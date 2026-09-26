@@ -123,9 +123,12 @@ export async function reviewNgoApplication(
   signMessage: WalletSignMessage,
   id: string,
   action: 'approve' | 'reject',
+  reviewNote?: string,
 ): Promise<NgoApplication> {
   const path = `/ngo-applications/${id}/${action}`;
-  const res = await adminFetch('POST', path, address, signMessage, {});
+  const res = await adminFetch('POST', path, address, signMessage, {
+    reviewNote: reviewNote?.trim() || undefined,
+  });
   if (!res.ok) {
     throw new Error(`Failed to ${action} application: ${res.status}`);
   }
