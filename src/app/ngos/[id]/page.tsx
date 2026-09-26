@@ -90,11 +90,11 @@ export default async function NgoProfilePage({ params }: Props) {
         <dl className="mt-8 grid grid-cols-2 gap-6 sm:grid-cols-4">
           <div>
             <dt className="text-sm text-gray-500 dark:text-gray-400">Total committed</dt>
-            <dd className="text-lg font-semibold">{ngo.stats.totalCommitted}</dd>
+            <dd className="text-lg font-semibold">{formatAmount(ngo.stats.totalCommitted)}</dd>
           </div>
           <div>
             <dt className="text-sm text-gray-500 dark:text-gray-400">Total withdrawn</dt>
-            <dd className="text-lg font-semibold">{ngo.stats.totalWithdrawn}</dd>
+            <dd className="text-lg font-semibold">{formatAmount(ngo.stats.totalWithdrawn)}</dd>
           </div>
           <div>
             <dt className="text-sm text-gray-500 dark:text-gray-400">Active streams</dt>
