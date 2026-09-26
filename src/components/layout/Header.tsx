@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Logo } from '@/components/layout/Logo';
@@ -17,6 +18,10 @@ const NAV_LINKS = [
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  const isActiveLink = (href: string) =>
+    pathname === href || pathname.startsWith(`${href}/`);
 
   // Close the mobile menu when the viewport widens past the md breakpoint
   // (768 px — matches Tailwind's default) so the open state doesn't linger
@@ -45,15 +50,25 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-6 md:flex">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="text-sm font-medium text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {NAV_LINKS.map((link) => {
+            const isActive = isActiveLink(link.href);
+
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={isActive ? 'page' : undefined}
+                className={[
+                  'rounded-md border border-transparent px-2 py-1 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-300'
+                    : 'text-gray-600 hover:border-gray-200 hover:bg-gray-100 hover:text-black dark:text-gray-400 dark:hover:border-gray-700 dark:hover:bg-gray-800 dark:hover:text-white',
+                ].join(' ')}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
           <ConnectWalletButton />
         </nav>
 
@@ -84,16 +99,26 @@ export function Header() {
 
       {menuOpen && (
         <nav id="mobile-nav" className="mt-4 flex flex-col gap-4 md:hidden">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMenuOpen(false)}
-              className="text-sm font-medium text-gray-600 hover:text-black dark:text-gray-400 dark:hover:text-white"
-            >
-              {link.label}
-            </Link>
-          ))}
+          {NAV_LINKS.map((link) => {
+            const isActive = isActiveLink(link.href);
+
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={isActive ? 'page' : undefined}
+                onClick={() => setMenuOpen(false)}
+                className={[
+                  'rounded-md border-l-2 border-transparent px-2 py-1 text-sm font-medium transition-colors',
+                  isActive
+                    ? 'border-emerald-500 bg-emerald-50 text-emerald-700 dark:border-emerald-400 dark:bg-emerald-950/40 dark:text-emerald-300'
+                    : 'text-gray-600 hover:border-gray-200 hover:bg-gray-100 hover:text-black dark:text-gray-400 dark:hover:border-gray-700 dark:hover:bg-gray-800 dark:hover:text-white',
+                ].join(' ')}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
           <ConnectWalletButton />
         </nav>
       )}
