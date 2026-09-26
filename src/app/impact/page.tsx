@@ -23,11 +23,37 @@ export default function ImpactPage() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    let interval: ReturnType<typeof window.setInterval> | undefined;
+
+    const startPolling = () => {
+      if (interval) clearInterval(interval);
+      refresh();
+      interval = window.setInterval(refresh, POLL_INTERVAL_MS);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (interval) {
+          clearInterval(interval);
+          interval = undefined;
+        }
+        return;
+      }
+
+      startPolling();
+    };
+
     // Simulates "live" via polling — there's no websocket/SSE push from
     // the backend to actually stream updates.
-    const interval = setInterval(refresh, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    if (document.visibilityState === 'visible') {
+      startPolling();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [refresh]);
 
   return (
