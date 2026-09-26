@@ -35,7 +35,12 @@ export function parseAmount(input: string): bigint | null {
   return raw > 0n ? raw : null;
 }
 
-/** Shortens a wallet/contract address to its first and last 4 characters. */
+/** Shortens a wallet/contract address to its first and last 4 characters.
+ * Returns the original string unchanged if it is too short to truncate
+ * without the two halves overlapping (i.e. fewer than 9 characters). */
 export function truncateAddress(address: string): string {
+  if (address.length < 9) {
+    return address;
+  }
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
 }

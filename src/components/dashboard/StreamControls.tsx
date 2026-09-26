@@ -8,6 +8,20 @@ import type { Stream } from '@/lib/api';
 import { getDonationVaultClient } from '@/lib/donationVaultClient';
 import { parseAmount } from '@/lib/format';
 
+/**
+ * Computes the per-second token rate for a stream modification.
+ *
+ * Divides the remaining balance (raw i128 string) by a duration in seconds
+ * using integer division, mirroring the on-chain contract's expectation.
+ * Returns `null` when the result would be zero (balance too small for the
+ * chosen duration) so the caller can surface a validation error instead of
+ * submitting a zero-rate transaction.
+ */
+export function computeModifyRate(balance: string, durationSeconds: number): bigint | null {
+  const rate = BigInt(balance) / BigInt(durationSeconds);
+  return rate > 0n ? rate : null;
+}
+
 const DURATIONS = [
   { label: '1 week', seconds: 7 * 24 * 60 * 60 },
   { label: '1 month', seconds: 30 * 24 * 60 * 60 },
@@ -82,8 +96,8 @@ export function StreamControls({ stream, onChanged }: { stream: Stream; onChange
     // Re-rate the stream's *remaining* balance over a newly chosen
     // duration — asking a donor for a raw per-second rate makes no more
     // sense here than it did on the create-stream form.
-    const newRate = BigInt(stream.balance) / BigInt(durationSeconds);
-    if (newRate <= 0n) {
+    const newRate = computeModifyRate(stream.balance, durationSeconds);
+    if (newRate === null) {
       showToast('error', 'Remaining balance is too small to stream over this duration.');
       return;
     }

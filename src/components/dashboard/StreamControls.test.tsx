@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Stream } from '@/lib/api';
 
-import { StreamControls } from './StreamControls';
+import { StreamControls, computeModifyRate } from './StreamControls';
 
 const DONOR_ADDRESS = 'G' + 'D'.repeat(55);
 
@@ -25,7 +25,7 @@ vi.mock('@/components/toast/ToastProvider', () => ({
 
 // signAndSend never settles, so the component stays in its in-flight state
 // long enough to assert on the button labels.
-const neverSettles = () => ({ signAndSend: () => new Promise(() => {}) });
+const neverSettles = () => ({ signAndSend: () => new Promise(() => { }) });
 
 vi.mock('@/lib/donationVaultClient', () => ({
   getDonationVaultClient: vi.fn(async () => ({
@@ -89,5 +89,22 @@ describe('StreamControls', () => {
     expect(await screen.findByRole('button', { name: 'Cancelling…' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Top up' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Modify rate' })).toBeDisabled();
+  });
+});
+
+describe('computeModifyRate', () => {
+  it('divides balance by duration to produce the per-second rate', () => {
+    // 1 000 000 000 000 raw units over 30 days (2 592 000 s)
+    // = 385 802 n (integer division)
+    expect(computeModifyRate('1000000000000', 30 * 24 * 60 * 60)).toBe(385802n);
+  });
+
+  it('returns null when balance is too small for the chosen duration', () => {
+    // 100 raw units over 1 year (31 536 000 s) → 0 per second
+    expect(computeModifyRate('100', 365 * 24 * 60 * 60)).toBeNull();
+  });
+
+  it('returns null for a zero balance', () => {
+    expect(computeModifyRate('0', 60 * 60)).toBeNull();
   });
 });

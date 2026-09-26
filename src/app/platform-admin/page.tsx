@@ -144,6 +144,14 @@ export default function PlatformAdminPage() {
                       </p>
                       <CopyAddressButton address={app.ownerAddress} />
                     </div>
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
+                      Submitted{' '}
+                      {new Date(app.createdAt).toLocaleDateString(undefined, {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <button
