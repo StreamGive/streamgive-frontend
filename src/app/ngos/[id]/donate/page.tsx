@@ -32,7 +32,7 @@ export default async function DonatePage({ params }: Props) {
     return (
       <>
         <Header />
-        <main className="px-6 py-16 sm:px-12">
+        <main id="main" className="px-6 py-16 sm:px-12">
           <p className="text-red-600 dark:text-red-400">
             Couldn&apos;t reach the StreamGive API. Is the backend running?
           </p>
@@ -45,7 +45,7 @@ export default async function DonatePage({ params }: Props) {
   return (
     <>
       <Header />
-      <main className="px-6 py-16 sm:px-12">
+      <main id="main" className="px-6 py-16 sm:px-12">
         <h1 className="text-2xl font-bold">Start streaming to {ngoName}</h1>
         <div className="mt-8">
           <CreateStreamForm ngoAddress={ngoAddress} />

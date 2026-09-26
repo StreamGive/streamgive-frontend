@@ -87,7 +87,7 @@ export default function PlatformAdminPage() {
   return (
     <>
       <Header />
-      <main className="px-6 py-16 sm:px-12">
+      <main id="main" className="px-6 py-16 sm:px-12">
         <h1 className="text-2xl font-bold">Platform admin</h1>
         <p className="mt-2 max-w-xl text-sm text-gray-600 dark:text-gray-400">
           Review pending NGO applications. Only the wallet configured as the platform&apos;s
