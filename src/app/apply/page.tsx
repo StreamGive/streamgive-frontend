@@ -11,6 +11,11 @@ import { getNgoRegistryClient } from '@/lib/ngoRegistryClient';
 
 type Status = 'idle' | 'registering' | 'submitting' | 'success' | 'error';
 
+// Mirrors the backend's zod schema for NGO applications.
+const NAME_MAX_LENGTH = 200;
+const DESCRIPTION_MAX_LENGTH = 5000;
+const COUNTRY_MAX_LENGTH = 100;
+
 /** True when a failed contract call is ngo-registry reporting that this
   * address is already in the registry. Re-applying after a part-finished
   * attempt is normal, so that is a no-op to step over, not an error. */
@@ -136,6 +141,7 @@ export default function ApplyPage() {
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 required
+                maxLength={NAME_MAX_LENGTH}
                 className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
               />
             </label>
@@ -147,8 +153,12 @@ export default function ApplyPage() {
                 onChange={(event) => setDescription(event.target.value)}
                 required
                 rows={4}
+                maxLength={DESCRIPTION_MAX_LENGTH}
                 className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
               />
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                {description.length} / {DESCRIPTION_MAX_LENGTH}
+              </p>
             </label>
 
             <label className="block">
@@ -179,6 +189,7 @@ export default function ApplyPage() {
                 type="text"
                 value={country}
                 onChange={(event) => setCountry(event.target.value)}
+                maxLength={COUNTRY_MAX_LENGTH}
                 className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
               />
             </label>
