@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Logo } from '@/components/layout/Logo';
 import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
@@ -17,6 +17,20 @@ const NAV_LINKS = [
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close the mobile menu when the viewport widens past the md breakpoint
+  // (768 px — matches Tailwind's default) so the open state doesn't linger
+  // underneath the now-visible desktop nav.
+  useEffect(() => {
+    const MD_BREAKPOINT = 768;
+    const handleResize = () => {
+      if (window.innerWidth >= MD_BREAKPOINT) {
+        setMenuOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <header className="border-b border-gray-200 px-6 py-4 sm:px-12 dark:border-gray-800">
