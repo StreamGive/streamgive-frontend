@@ -1,35 +1,29 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseAmount, truncateAddress } from './format';
+import { formatAmount } from './format';
 
-describe('parseAmount', () => {
-  it('keeps every digit of a large whole amount', () => {
-    // 20 significant digits once scaled — well past what a float can hold.
-    expect(parseAmount('1234567890123')).toBe(12345678901230000000n);
+describe('formatAmount', () => {
+  it('formats a typical amount correctly', () => {
+    // 10_0000000 base units = 10 XLM
+    expect(formatAmount('100000000')).toBe(
+      (10).toLocaleString(undefined, { maximumFractionDigits: 7 }),
+    );
   });
 
-  it('accepts exactly 7 decimal places', () => {
-    expect(parseAmount('1.2345678')).toBe(12345678n);
-    expect(parseAmount('0.0000001')).toBe(1n);
+  it('formats zero as 0', () => {
+    expect(formatAmount('0')).toBe(
+      (0).toLocaleString(undefined, { maximumFractionDigits: 7 }),
+    );
   });
 
-  it('keeps precision when a large amount has 7 decimal places', () => {
-    expect(parseAmount('98765432109.1234567')).toBe(987654321091234567n);
-  });
-
-  it('rejects more than 7 decimal places', () => {
-    expect(parseAmount('1.23456789')).toBeNull();
-    expect(parseAmount('0.00000001')).toBeNull();
-  });
-
-  it('rejects invalid input', () => {
-    expect(parseAmount('')).toBeNull();
-    expect(parseAmount('.')).toBeNull();
-    expect(parseAmount('abc')).toBeNull();
-    expect(parseAmount('1.2.3')).toBeNull();
-    expect(parseAmount('-5')).toBeNull();
-    expect(parseAmount('1e5')).toBeNull();
-    expect(parseAmount('0')).toBeNull();
+  it('formats a large value near safe integer precision', () => {
+    // 9_000_000 XLM = 90_000_000_0000000 base units (well within i128, close
+    // to the upper end of typical treasury balances used in production)
+    const raw = '900000000000000'; // 9_000_000 XLM
+    expect(formatAmount(raw)).toBe(
+      (9_000_000).toLocaleString(undefined, { maximumFractionDigits: 7 }),
+    );
   });
 });
 

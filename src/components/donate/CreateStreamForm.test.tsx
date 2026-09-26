@@ -75,6 +75,22 @@ describe('CreateStreamForm', () => {
     expect(screen.getByRole('button', { name: /review & sign/i })).toBeDisabled();
   });
 
+  it('re-enables submit after switching back to XLM (native) from a custom token', async () => {
+    const user = userEvent.setup();
+    render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+    await user.type(screen.getByPlaceholderText('100'), '100');
+
+    // Switch to custom and type an address so the button is enabled.
+    await user.click(screen.getByLabelText(/custom asset/i));
+    await user.type(screen.getByPlaceholderText(/token contract address/i), 'CTOKENADDRESS');
+    expect(screen.getByRole('button', { name: /review & sign/i })).not.toBeDisabled();
+
+    // Switch back to native XLM — the custom address no longer matters.
+    await user.click(screen.getByLabelText(/xlm \(native\)/i));
+    expect(screen.getByRole('button', { name: /review & sign/i })).not.toBeDisabled();
+  });
+
   it('submits contract-shaped deposit/rate values and shows the resulting stream id', async () => {
     mockCreateStream.mockResolvedValue({
       signAndSend: vi.fn().mockResolvedValue({ result: 42n }),
