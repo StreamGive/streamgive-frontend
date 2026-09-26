@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseAmount } from './format';
+import { parseAmount, truncateAddress } from './format';
 
 describe('parseAmount', () => {
   it('keeps every digit of a large whole amount', () => {
@@ -30,5 +30,23 @@ describe('parseAmount', () => {
     expect(parseAmount('-5')).toBeNull();
     expect(parseAmount('1e5')).toBeNull();
     expect(parseAmount('0')).toBeNull();
+  });
+});
+
+describe('truncateAddress', () => {
+  it('truncates a full-length Stellar address', () => {
+    const address = 'G' + 'A'.repeat(55);
+    expect(truncateAddress(address)).toBe('GAAA…AAAA');
+  });
+
+  it('returns the original string when it is shorter than 9 characters', () => {
+    expect(truncateAddress('GABC')).toBe('GABC');
+    expect(truncateAddress('')).toBe('');
+    expect(truncateAddress('GABCDEFG')).toBe('GABCDEFG');
+  });
+
+  it('truncates a string of exactly 9 characters without overlap', () => {
+    // 4 + ellipsis + 4 = 9, so the boundary case should still truncate
+    expect(truncateAddress('ABCDE1234')).toBe('ABCD…1234');
   });
 });
