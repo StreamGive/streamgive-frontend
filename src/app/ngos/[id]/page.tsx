@@ -43,7 +43,7 @@ export default async function NgoProfilePage({ params }: Props) {
     return (
       <>
         <Header />
-        <main className="px-6 py-16 sm:px-12">
+        <main id="main" className="px-6 py-16 sm:px-12">
           <p className="text-red-600 dark:text-red-400">
             Couldn&apos;t reach the StreamGive API. Is the backend running?
           </p>
@@ -67,7 +67,7 @@ export default async function NgoProfilePage({ params }: Props) {
   return (
     <>
       <Header />
-      <main className="px-6 py-16 sm:px-12">
+      <main id="main" className="px-6 py-16 sm:px-12">
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{ngo.name}</h1>
           {ngo.verified && (

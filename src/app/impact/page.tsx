@@ -23,17 +23,43 @@ export default function ImpactPage() {
   }, []);
 
   useEffect(() => {
-    refresh();
+    let interval: ReturnType<typeof window.setInterval> | undefined;
+
+    const startPolling = () => {
+      if (interval) clearInterval(interval);
+      refresh();
+      interval = window.setInterval(refresh, POLL_INTERVAL_MS);
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        if (interval) {
+          clearInterval(interval);
+          interval = undefined;
+        }
+        return;
+      }
+
+      startPolling();
+    };
+
     // Simulates "live" via polling — there's no websocket/SSE push from
     // the backend to actually stream updates.
-    const interval = setInterval(refresh, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
+    if (document.visibilityState === 'visible') {
+      startPolling();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [refresh]);
 
   return (
     <>
       <Header />
-      <main className="px-6 py-16 sm:px-12">
+      <main id="main" className="px-6 py-16 sm:px-12">
         <h1 className="text-2xl font-bold">Platform impact</h1>
         <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
           Updates automatically every {POLL_INTERVAL_MS / 1000} seconds.

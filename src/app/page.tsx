@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <>
       <Header />
-      <main>
+      <main id="main">
         <section className="flex flex-col items-center gap-6 px-6 py-24 text-center sm:px-12">
           <h1 className="max-w-2xl text-4xl font-bold sm:text-5xl">
             Give as a stream, not a one-time click.
