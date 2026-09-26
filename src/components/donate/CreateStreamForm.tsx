@@ -5,7 +5,7 @@ import { useState, type FormEvent } from 'react';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { getDonationVaultClient } from '@/lib/donationVaultClient';
 import { parseAmount, TOKEN_DECIMALS } from '@/lib/format';
-import { getNativeAssetAddress, getUsdcAssetAddress } from '@/lib/stellar';
+import { DONATION_VAULT_CONTRACT_ID, getNativeAssetAddress, getUsdcAssetAddress } from '@/lib/stellar';
 
 const DURATIONS = [
   { label: '1 week', seconds: 7 * 24 * 60 * 60 },
@@ -78,6 +78,19 @@ export function CreateStreamForm({ ngoAddress }: { ngoAddress: string }) {
       setErrorMessage(err instanceof Error ? err.message : 'Something went wrong.');
       setSubmitState('error');
     }
+  }
+
+  if (!DONATION_VAULT_CONTRACT_ID) {
+    return (
+      <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 dark:border-amber-800 dark:bg-amber-950">
+        <p className="font-medium text-amber-800 dark:text-amber-300">Widget not configured</p>
+        <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
+          The donation contract address is missing. Set{' '}
+          <code className="font-mono">NEXT_PUBLIC_DONATION_VAULT_CONTRACT_ID</code> in the
+          deployment environment to enable donations.
+        </p>
+      </div>
+    );
   }
 
   if (submitState === 'success' && streamId !== null) {
