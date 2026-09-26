@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 
 import { Footer } from '@/components/layout/Footer';
 import { Header } from '@/components/layout/Header';
+import { CopyLinkButton } from '@/components/common/CopyLinkButton';
 import { getNgo, getStreams, type NgoProfile, type Stream } from '@/lib/api';
 import { formatAmount, truncateAddress } from '@/lib/format';
 import { explorerUrl } from '@/lib/stellar';
@@ -67,13 +68,14 @@ export default async function NgoProfilePage({ params }: Props) {
     <>
       <Header />
       <main className="px-6 py-16 sm:px-12">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{ngo.name}</h1>
           {ngo.verified && (
             <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
               Verified
             </span>
           )}
+          <CopyLinkButton />
         </div>
 
         <a
