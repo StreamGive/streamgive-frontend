@@ -16,6 +16,8 @@ npm install
 npm run dev   # http://localhost:3001 — 3000 is taken by streamgive-backend
 ```
 
+See [ENVIRONMENT.md](./ENVIRONMENT.md) for a full reference of every `NEXT_PUBLIC_*` variable.
+
 ## Deployment
 
 **Vercel (recommended)** — Next.js's own platform, effectively zero-config:
