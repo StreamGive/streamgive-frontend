@@ -52,4 +52,15 @@ test.describe('core donor flow (no wallet extension required)', () => {
       await expect(page.getByRole('button', { name: /connect wallet/i })).toBeVisible();
     }
   });
+
+  test('apply page hides the application form until a wallet is connected', async ({ page }) => {
+    await page.goto('/apply');
+
+    await expect(page.getByRole('heading', { name: /apply as an ngo/i })).toBeVisible();
+    await expect(page.getByText(/connect your wallet to apply/i)).toBeVisible();
+    await expect(page.getByRole('button', { name: /connect wallet/i })).toBeVisible();
+
+    await expect(page.getByLabel(/organization name/i)).not.toBeVisible();
+    await expect(page.getByRole('button', { name: /submit application/i })).not.toBeVisible();
+  });
 });
