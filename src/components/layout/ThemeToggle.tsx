@@ -70,7 +70,7 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={mounted ? `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode` : 'Toggle theme'}
-      className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-black dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white"
+      className="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-white dark:focus-visible:ring-teal-400"
     >
       {mounted && (theme === 'dark' ? <SunIcon /> : <MoonIcon />)}
     </button>

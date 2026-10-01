@@ -9,7 +9,11 @@ import { CreateStreamForm } from './CreateStreamForm';
 const DONOR_ADDRESS = 'G' + 'D'.repeat(55);
 const NGO_ADDRESS = 'G' + 'N'.repeat(55);
 const NGO_ID = 'ngo-1';
+const NGO_NAME = 'Test NGO';
 const NATIVE_TOKEN_ADDRESS = 'CNATIVEFAKE';
+// Matches CreateStreamForm's STELLAR_CONTRACT_RE (C + 55 base32 chars) so
+// tests exercising "a valid custom token address" don't trip the same
+// format validation a too-short placeholder like "CTOKENADDRESS" would.
 const USDC_TOKEN_ADDRESS = 'CUSDCFAKE';
 const CUSTOM_TOKEN_ADDRESS = 'C' + 'T'.repeat(55);
 
@@ -34,7 +38,7 @@ vi.mock('@/components/wallet/WalletProvider', () => ({
 const mockGetTokenBalance = vi.fn();
 
 vi.mock('@/lib/stellar', () => ({
-  DONATION_VAULT_CONTRACT_ID: 'CDONATIONVAULT',
+  DONATION_VAULT_CONTRACT_ID: 'CVAULTFAKE',
   getNativeAssetAddress: () => NATIVE_TOKEN_ADDRESS,
   getUsdcAssetAddress: () => USDC_TOKEN_ADDRESS,
   getTokenBalance: (...args: unknown[]) => mockGetTokenBalance(...args),
@@ -186,6 +190,7 @@ describe('CreateStreamForm', () => {
 
     await user.type(screen.getByPlaceholderText('100'), '100');
     await user.click(screen.getByRole('button', { name: /review & sign/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm & sign/i }));
 
     expect(await screen.findByText(/stream started/i)).toBeInTheDocument();
     expect(screen.getByText(/stream #42/i)).toBeInTheDocument();
@@ -213,6 +218,7 @@ describe('CreateStreamForm', () => {
 
     await user.type(screen.getByPlaceholderText('100'), '100');
     await user.click(screen.getByRole('button', { name: /review & sign/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm & sign/i }));
 
     await screen.findByText(/stream started/i);
     expect(mockPush).toHaveBeenCalledWith(`/ngos/${NGO_ID}/donate/success?streamId=42`);
@@ -229,9 +235,112 @@ describe('CreateStreamForm', () => {
 
     await user.type(screen.getByPlaceholderText('100'), '100');
     await user.click(screen.getByRole('button', { name: /review & sign/i }));
+    await user.click(await screen.findByRole('button', { name: /confirm & sign/i }));
 
     // 1 000 000 stroops = 0.1 XLM.
     expect(await screen.findByText(/estimated network fee: ≈ 0.1 xlm/i)).toBeInTheDocument();
+  });
+
+  describe('quick-amount presets', () => {
+    it('fills the amount field when a preset is clicked', async () => {
+      const user = userEvent.setup();
+      render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+      await user.click(screen.getByRole('button', { name: 'Set amount to 25' }));
+
+      expect(screen.getByPlaceholderText('100')).toHaveValue(25);
+    });
+
+    it('still allows manual typing after a preset is clicked', async () => {
+      const user = userEvent.setup();
+      render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+      await user.click(screen.getByRole('button', { name: 'Set amount to 25' }));
+      expect(screen.getByPlaceholderText('100')).toHaveValue(25);
+
+      const input = screen.getByPlaceholderText('100');
+      await user.clear(input);
+      await user.type(input, '42');
+
+      expect(input).toHaveValue(42);
+    });
+
+    it('lets manual entry override a preset, and a later preset override manual entry', async () => {
+      const user = userEvent.setup();
+      render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+      const input = screen.getByPlaceholderText('100');
+
+      await user.type(input, '7');
+      expect(input).toHaveValue(7);
+
+      await user.click(screen.getByRole('button', { name: 'Set amount to 100' }));
+      expect(input).toHaveValue(100);
+    });
+  });
+
+  describe('confirmation summary', () => {
+    it('shows NGO, token, amount, rate, duration, and end date before signing', async () => {
+      const user = userEvent.setup();
+      render(
+        <CreateStreamForm ngoAddress={NGO_ADDRESS} ngoId={NGO_ID} ngoName={NGO_NAME} />,
+      );
+
+      await user.type(screen.getByPlaceholderText('100'), '100');
+      await user.click(screen.getByRole('button', { name: /review & sign/i }));
+
+      const dialog = await screen.findByRole('dialog', { name: /confirm your stream/i });
+      expect(dialog).toHaveTextContent(NGO_NAME);
+      expect(dialog).toHaveTextContent('XLM (native)');
+      expect(dialog).toHaveTextContent('100');
+      expect(dialog).toHaveTextContent('/ second');
+      expect(dialog).toHaveTextContent('1 month');
+
+      // Not yet signed — the contract call is gated behind Confirm.
+      expect(mockCreateStream).not.toHaveBeenCalled();
+    });
+
+    it('does not call the contract until Confirm & Sign is clicked', async () => {
+      const user = userEvent.setup();
+      render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+      await user.type(screen.getByPlaceholderText('100'), '100');
+      await user.click(screen.getByRole('button', { name: /review & sign/i }));
+
+      await screen.findByRole('dialog');
+      expect(mockCreateStream).not.toHaveBeenCalled();
+    });
+
+    it('returns to the form without calling the contract when Cancel is clicked', async () => {
+      const user = userEvent.setup();
+      render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+      await user.type(screen.getByPlaceholderText('100'), '100');
+      await user.click(screen.getByRole('button', { name: /review & sign/i }));
+      await screen.findByRole('dialog');
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(mockCreateStream).not.toHaveBeenCalled();
+      // The form is interactive again with the amount preserved.
+      expect(screen.getByPlaceholderText('100')).toHaveValue(100);
+      expect(screen.getByRole('button', { name: /review & sign/i })).not.toBeDisabled();
+    });
+
+    it('calls the contract exactly once after confirming', async () => {
+      mockCreateStream.mockResolvedValue({
+        signAndSend: vi.fn().mockResolvedValue({ result: 42n }),
+      });
+      const user = userEvent.setup();
+      render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+      await user.type(screen.getByPlaceholderText('100'), '100');
+      await user.click(screen.getByRole('button', { name: /review & sign/i }));
+      await user.click(await screen.findByRole('button', { name: /confirm & sign/i }));
+
+      await screen.findByText(/stream started/i);
+      expect(mockCreateStream).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('fetches and displays the wallet balance for the selected token', async () => {

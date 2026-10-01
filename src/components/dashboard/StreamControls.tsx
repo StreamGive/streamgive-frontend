@@ -58,7 +58,7 @@ export function StreamControls({
    */
   onOptimisticUpdate?: (patch: Partial<Stream>) => void;
 }) {
-  const { address, signTransaction } = useWallet();
+  const { address } = useWallet();
   const { client, ready } = useDonationVaultClient();
   const { showToast } = useToast();
   const [mode, setMode] = useState<Mode>('idle');
@@ -178,20 +178,20 @@ export function StreamControls({
           onChange={(event) => setTopUpAmount(event.target.value)}
           placeholder="Amount"
           aria-label="Amount to add to this stream"
-          className="w-28 rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-gray-700"
+          className="w-28 rounded-md border border-gray-300 px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:focus-visible:ring-teal-400"
         />
         <button
           type="button"
           onClick={() => void handleTopUp()}
           disabled={topUpAmountRaw === null}
-          className="rounded-md bg-black px-3 py-1 text-sm font-medium text-white disabled:opacity-50 dark:bg-white dark:text-black"
+          className="rounded-md bg-black px-3 py-1 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-50 dark:bg-white dark:text-black dark:focus-visible:ring-teal-400"
         >
           Confirm
         </button>
         <button
           type="button"
           onClick={() => setMode('idle')}
-          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium dark:border-gray-700"
+          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:focus-visible:ring-teal-400"
         >
           Back
         </button>
@@ -208,14 +208,14 @@ export function StreamControls({
         <button
           type="button"
           onClick={() => void handleCancel()}
-          className="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600"
+          className="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:bg-red-500 dark:hover:bg-red-600 dark:focus-visible:ring-teal-400"
         >
           Yes, cancel
         </button>
         <button
           type="button"
           onClick={() => setMode('idle')}
-          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium dark:border-gray-700"
+          className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:focus-visible:ring-teal-400"
         >
           Never mind
         </button>
@@ -234,7 +234,7 @@ export function StreamControls({
             value={durationSeconds}
             onChange={(event) => setDurationSeconds(Number(event.target.value))}
             aria-label="New duration to stream the remaining balance over"
-            className="rounded-md border border-gray-300 px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
+            className="rounded-md border border-gray-300 px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:focus-visible:ring-teal-400"
           >
             {DURATIONS.map((d) => (
               <option key={d.seconds} value={d.seconds}>
@@ -245,14 +245,14 @@ export function StreamControls({
           <button
             type="button"
             onClick={() => void handleModifyRate()}
-            className="rounded-md bg-black px-3 py-1 text-sm font-medium text-white dark:bg-white dark:text-black"
+            className="rounded-md bg-black px-3 py-1 text-sm font-medium text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:bg-white dark:text-black dark:focus-visible:ring-teal-400"
           >
             Confirm
           </button>
           <button
             type="button"
             onClick={() => setMode('idle')}
-            className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium dark:border-gray-700"
+            className="rounded-md border border-gray-300 px-3 py-1 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:focus-visible:ring-teal-400"
           >
             Back
           </button>
@@ -280,7 +280,7 @@ export function StreamControls({
         type="button"
         onClick={() => setMode('toppingUp')}
         disabled={pending !== null || !ready}
-        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-50 dark:focus-visible:ring-teal-400"
       >
         {pending === 'topUp' ? 'Topping up…' : 'Top up'}
       </button>
@@ -288,7 +288,7 @@ export function StreamControls({
         type="button"
         onClick={() => setMode('modifying')}
         disabled={pending !== null || !ready}
-        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-50 dark:focus-visible:ring-teal-400"
       >
         {pending === 'modifyRate' ? 'Updating…' : 'Modify rate'}
       </button>
@@ -296,7 +296,7 @@ export function StreamControls({
         type="button"
         onClick={() => setMode('confirmingCancel')}
         disabled={pending !== null || !ready}
-        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50"
+        className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-50 dark:focus-visible:ring-teal-400"
       >
         {pending === 'cancel' ? 'Cancelling…' : 'Cancel'}
       </button>

@@ -56,6 +56,28 @@ describe('Header', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
   });
 
+  it('gives every desktop nav link a visible focus-visible ring', () => {
+    render(<Header />);
+
+    for (const { label } of NAV_LINKS) {
+      expect(screen.getByRole('link', { name: label })).toHaveClass(
+        'focus-visible:outline-none',
+        'focus-visible:ring-2',
+        'focus-visible:ring-teal-600',
+      );
+    }
+  });
+
+  it('gives the mobile menu toggle a visible focus-visible ring', () => {
+    render(<Header />);
+
+    expect(screen.getByRole('button', { name: 'Toggle menu' })).toHaveClass(
+      'focus-visible:outline-none',
+      'focus-visible:ring-2',
+      'focus-visible:ring-teal-600',
+    );
+  });
+
   it('closes the mobile menu when a nav link inside it is clicked', async () => {
     const user = userEvent.setup();
     render(<Header />);

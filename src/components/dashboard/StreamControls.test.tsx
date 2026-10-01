@@ -91,6 +91,18 @@ describe('StreamControls', () => {
     getStreams.mockResolvedValue([STREAM]);
   });
 
+  it('gives every idle-state action button a visible focus-visible ring', () => {
+    render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
+
+    for (const name of ['Top up', 'Modify rate', 'Cancel']) {
+      expect(screen.getByRole('button', { name })).toHaveClass(
+        'focus-visible:outline-none',
+        'focus-visible:ring-2',
+        'focus-visible:ring-teal-600',
+      );
+    }
+  });
+
   it('disables every action button and shows a loading indicator while the contract client is not ready', () => {
     useDonationVaultClient.mockReturnValue({ client: null, ready: false });
     render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);

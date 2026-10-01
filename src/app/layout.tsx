@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import { Suspense } from 'react';
 
+import { EnvironmentBanner } from '@/components/common/EnvironmentBanner';
 import { RouteProgressBar } from '@/components/common/RouteProgressBar';
 import { ToastProvider } from '@/components/toast/ToastProvider';
 import { WalletProvider } from '@/components/wallet/WalletProvider';
@@ -62,6 +63,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-white text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100`}
       >
+        <EnvironmentBanner />
         {/* RouteProgressBar reads useSearchParams(), which requires a
             Suspense boundary — see NgoExplorer's own use of this pattern. */}
         <Suspense fallback={null}>
