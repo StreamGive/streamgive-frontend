@@ -136,16 +136,56 @@ export type Stream = {
  *
  * @throws {Error} if the response is not ok.
  */
-export async function getStreams(filter: { donor?: string; ngo?: string }): Promise<Stream[]> {
+export async function getStreams(
+  filter: { donor?: string; ngo?: string },
+  signal?: AbortSignal,
+): Promise<Stream[]> {
   const params = new URLSearchParams();
   if (filter.donor) params.set('donor', filter.donor);
   if (filter.ngo) params.set('ngo', filter.ngo);
 
   const res = await fetch(`${API_URL}/streams?${params.toString()}`, {
-    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(API_TIMEOUT_MS)])
+      : AbortSignal.timeout(API_TIMEOUT_MS),
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch streams: ${res.status}`);
+  }
+  return res.json();
+}
+
+export type Withdrawal = {
+  id: string;
+  /** The on-chain id of the stream this was withdrawn from — same value
+   * shown elsewhere as "Stream #X" (see Stream.onChainId). */
+  streamId: string;
+  /** Net amount withdrawn, as a raw i128 string (same units/scale as
+   * Stream.balance/withdrawn — see TOKEN_DECIMALS/formatAmount). */
+  amount: string;
+  createdAt: string;
+};
+
+/**
+ * Fetches an NGO's past withdrawal transactions, newest first, for the
+ * "Transaction history" panel on the NGO admin page.
+ *
+ * Called client-side (it depends on the connected wallet's NGO match), so
+ * no Next.js server-fetch caching options.
+ *
+ * @param ngoId - The NGO's id (see Ngo.id), not its Stellar address.
+ * @param signal - Optional caller-supplied abort signal, combined with the
+ * request's own timeout so either one can cancel the fetch.
+ * @throws {Error} if the response is not ok.
+ */
+export async function getWithdrawals(ngoId: string, signal?: AbortSignal): Promise<Withdrawal[]> {
+  const res = await fetch(`${API_URL}/ngos/${ngoId}/withdrawals`, {
+    signal: signal
+      ? AbortSignal.any([signal, AbortSignal.timeout(API_TIMEOUT_MS)])
+      : AbortSignal.timeout(API_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch withdrawals for NGO ${ngoId}: ${res.status}`);
   }
   return res.json();
 }
