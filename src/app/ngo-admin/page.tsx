@@ -9,6 +9,7 @@ import { Header } from '@/components/layout/Header';
 import { DonateQrCode } from '@/components/ngos/DonateQrCode';
 import { EmbedSnippet } from '@/components/ngoAdmin/EmbedSnippet';
 import { NgoAdminStreamList } from '@/components/ngoAdmin/NgoAdminStreamList';
+import { WithdrawalHistory } from '@/components/ngoAdmin/WithdrawalHistory';
 import { StreamDetailsModal } from '@/components/streams/StreamDetailsModal';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { getStreams, lookupNgoByAddress, type Ngo, type Stream } from '@/lib/api';
@@ -147,6 +148,8 @@ export default function NgoAdminPage() {
               onWithdrawn={() => void refresh()}
               onViewDetails={setDetailsStream}
             />
+
+            <WithdrawalHistory ngoId={ngo.id} />
           </>
         )}
       </main>

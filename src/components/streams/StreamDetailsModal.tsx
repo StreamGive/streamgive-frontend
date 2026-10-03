@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import type { Stream } from '@/lib/api';
 import { formatAmount } from '@/lib/format';
-import { explorerUrl, getNativeAssetAddress } from '@/lib/stellar';
+import { DONATION_VAULT_CONTRACT_ID, explorerUrl, getNativeAssetAddress } from '@/lib/stellar';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString();
@@ -150,6 +149,21 @@ export function StreamDetailsModal({ stream, onClose }: { stream: Stream; onClos
               </a>
             </dd>
           </div>
+          {DONATION_VAULT_CONTRACT_ID && (
+            <div className="flex items-center justify-between gap-4">
+              <dt className="text-gray-500 dark:text-gray-400">Contract</dt>
+              <dd className="font-medium">
+                <a
+                  href={explorerUrl('contract', DONATION_VAULT_CONTRACT_ID)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline"
+                >
+                  View contract
+                </a>
+              </dd>
+            </div>
+          )}
           <div className="flex items-center justify-between gap-4">
             <dt className="text-gray-500 dark:text-gray-400">Rate</dt>
             <dd className="font-medium">{formatAmount(stream.rate)} / second</dd>

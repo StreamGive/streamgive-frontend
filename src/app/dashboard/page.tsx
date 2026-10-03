@@ -18,6 +18,10 @@ import { formatAmount, formatRemainingDuration } from '@/lib/format';
 // pagination for /streams.
 const PAGE_SIZE = 10;
 
+// Keeps balances/withdrawn amounts from going stale while the tab sits
+// open — same polling approach as the impact page (src/app/impact/page.tsx).
+const POLL_INTERVAL_MS = 30_000;
+
 function LiveBalance({ stream }: { stream: Stream }) {
   const [estimatedBalance, setEstimatedBalance] = useState<bigint>(BigInt(stream.balance));
 
@@ -76,6 +80,7 @@ export default function DashboardPage() {
   const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'CANCELLED'>('ALL');
   const [filterInitialized, setFilterInitialized] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Drop any streams fetched under a previous address as soon as `address`
   // changes, during render rather than in an effect, so a stale list from
@@ -121,6 +126,71 @@ export default function DashboardPage() {
     refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    if (!address) return;
+
+    // A quiet background refresh — unlike refresh() above, it never flips
+    // `loading` (the list would otherwise flash "Loading your streams…"
+    // every 30s) and never re-runs the first-load filter auto-selection.
+    // Guards against setState after the poll's own fetch settles once this
+    // effect has already cleaned up, same reasoning as the impact page.
+    let cancelled = false;
+    let activeController: AbortController | null = null;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
+    function poll() {
+      const controller = new AbortController();
+      activeController = controller;
+      getStreams({ donor: address }, controller.signal)
+        .then((data) => {
+          if (!cancelled) {
+            setStreams(data);
+            setLoadError(false);
+          }
+        })
+        .catch((err: unknown) => {
+          if (!cancelled && !(err instanceof DOMException && err.name === 'AbortError')) {
+            setLoadError(true);
+          }
+        });
+    }
+
+    function startPolling() {
+      if (interval !== null) return;
+      interval = setInterval(poll, POLL_INTERVAL_MS);
+    }
+
+    function stopPolling() {
+      if (interval === null) return;
+      clearInterval(interval);
+      interval = null;
+    }
+
+    // Pausing while the tab is hidden means actually stopping the
+    // interval (not just skipping a tick on a timer that keeps running),
+    // and catching up with one immediate poll on becoming visible again.
+    function handleVisibilityChange() {
+      if (document.visibilityState === 'visible') {
+        poll();
+        startPolling();
+      } else {
+        stopPolling();
+      }
+    }
+
+    if (document.visibilityState === 'visible') {
+      startPolling();
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      stopPolling();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      activeController?.abort();
+    };
+  }, [address]);
+
   const applyOptimisticUpdate = useCallback((streamId: string, patch: Partial<Stream>) => {
     setStreams((prev) => prev.map((s) => (s.id === streamId ? { ...s, ...patch } : s)));
   }, []);
@@ -133,10 +203,13 @@ export default function DashboardPage() {
   const visibleStreams = streams.slice(0, visibleCount);
   const hasMore = visibleCount < streams.length;
 
+  const trimmedSearchQuery = searchQuery.trim();
   const filteredStreams = streams.filter((s) => {
-    if (filter === 'ALL') return true;
-    if (filter === 'ACTIVE') return s.status === 'ACTIVE';
-    if (filter === 'CANCELLED') return s.status === 'CANCELLED';
+    if (filter === 'ACTIVE' && s.status !== 'ACTIVE') return false;
+    if (filter === 'CANCELLED' && s.status !== 'CANCELLED') return false;
+    // Emptying the search box naturally clears the filter — an empty
+    // trimmedSearchQuery is falsy, so this check never excludes anything.
+    if (trimmedSearchQuery && !s.onChainId.includes(trimmedSearchQuery)) return false;
     return true;
   });
 
@@ -156,7 +229,7 @@ export default function DashboardPage() {
           </p>
         )}
 
-        {address && !loading && loadError && (
+        {address && !loading && loadError && streams.length === 0 && (
           <p className="mt-8 text-red-600 dark:text-red-400">
             Couldn&apos;t reach the StreamGive API. Is the backend running?
           </p>
@@ -172,8 +245,16 @@ export default function DashboardPage() {
           </p>
         )}
 
-        {address && !loading && !loadError && streams.length > 0 && (
+        {address && !loading && streams.length > 0 && (
           <>
+            {/* A later poll failed, but we still have the last good list —
+                keep showing it rather than replacing it with an error. */}
+            {loadError && (
+              <p role="status" className="mb-4 text-sm text-amber-600 dark:text-amber-400">
+                Couldn&apos;t refresh — showing the last numbers we loaded.
+              </p>
+            )}
+
             <div className="flex flex-wrap items-start justify-between gap-4">
               <dl className="grid grid-cols-3 gap-6 sm:w-fit sm:grid-cols-3">
                 <div>
@@ -225,9 +306,22 @@ export default function DashboardPage() {
               </button>
             </div>
 
+            <label className="mt-4 block max-w-xs">
+              <span className="sr-only">Search by on-chain stream ID</span>
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search by stream ID…"
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+              />
+            </label>
+
             {filteredStreams.length === 0 ? (
               <p className="mt-8 text-gray-600 dark:text-gray-400">
-                No {filter.toLowerCase()} streams found.
+                {trimmedSearchQuery
+                  ? `No streams match stream ID "${trimmedSearchQuery}".`
+                  : `No ${filter.toLowerCase()} streams found.`}
               </p>
             ) : (
               <ul className="mt-6 space-y-4">

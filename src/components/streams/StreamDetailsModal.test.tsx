@@ -8,6 +8,7 @@ import { StreamDetailsModal } from './StreamDetailsModal';
 vi.mock('@/lib/stellar', () => ({
   explorerUrl: vi.fn((type, id) => `https://stellar.expert/${type}/${id}`),
   getNativeAssetAddress: vi.fn(() => 'NATIVE_ASSET_ID'),
+  DONATION_VAULT_CONTRACT_ID: 'CVAULTCONTRACT',
 }));
 
 const MOCK_STREAM: Stream = {
@@ -36,6 +37,15 @@ describe('StreamDetailsModal', () => {
     render(<StreamDetailsModal stream={MOCK_STREAM} onClose={vi.fn()} />);
     
     expect(screen.getByText('CCONTRACTADDRESS')).toBeInTheDocument();
+  });
+
+  it('links "View contract" to the donation-vault address on stellar.expert', () => {
+    render(<StreamDetailsModal stream={MOCK_STREAM} onClose={vi.fn()} />);
+
+    expect(screen.getByRole('link', { name: 'View contract' })).toHaveAttribute(
+      'href',
+      'https://stellar.expert/contract/CVAULTCONTRACT',
+    );
   });
 
   it('calls onClose when clicking the modal backdrop', () => {
