@@ -52,6 +52,18 @@ describe('explorerUrl', () => {
   });
 });
 
+describe('IS_MAINNET', () => {
+  it('is false on testnet', async () => {
+    const { IS_MAINNET } = await freshStellar(TESTNET_PASSPHRASE);
+    expect(IS_MAINNET).toBe(false);
+  });
+
+  it('is true on mainnet', async () => {
+    const { IS_MAINNET } = await freshStellar(MAINNET_PASSPHRASE);
+    expect(IS_MAINNET).toBe(true);
+  });
+});
+
 describe('getNativeAssetAddress', () => {
   it('returns a valid 56-character contract address on testnet', async () => {
     const { getNativeAssetAddress } = await freshStellar(TESTNET_PASSPHRASE);

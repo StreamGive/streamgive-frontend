@@ -48,7 +48,7 @@ export default async function DonatePage({ params }: Props) {
       <main id="main" className="px-6 py-16 sm:px-12">
         <h1 className="text-2xl font-bold">Start streaming to {ngoName}</h1>
         <div className="mt-8">
-          <CreateStreamForm ngoId={id} ngoAddress={ngoAddress} />
+          <CreateStreamForm ngoId={id} ngoAddress={ngoAddress} ngoName={ngoName} />
         </div>
       </main>
       <Footer />

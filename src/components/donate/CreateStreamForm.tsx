@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 import { ConnectWalletPrompt } from '@/components/common/ConnectWalletPrompt';
 import { useWallet } from '@/components/wallet/WalletProvider';
@@ -21,12 +21,31 @@ const DURATIONS = [
   { label: '1 year', seconds: 365 * 24 * 60 * 60 },
 ];
 
-type TokenChoice = 'native' | 'usdc' | 'custom';
-type SubmitState = 'idle' | 'signing' | 'success' | 'error';
+// Quick-fill shortcuts for the "Total amount" field, in whichever token is
+// currently selected (the field isn't pinned to a single currency, so
+// these are unitless multipliers rather than e.g. "$5").
+const PRESET_AMOUNTS = [5, 10, 25, 100];
 
-export function CreateStreamForm({ ngoAddress, ngoId }: { ngoAddress: string; ngoId?: string }) {
+type TokenChoice = 'native' | 'usdc' | 'custom';
+type SubmitState = 'idle' | 'confirming' | 'signing' | 'success' | 'error';
+
+const TOKEN_LABELS: Record<TokenChoice, string> = {
+  native: 'XLM (native)',
+  usdc: 'USDC',
+  custom: 'Custom asset',
+};
+
+export function CreateStreamForm({
+  ngoAddress,
+  ngoId,
+  ngoName,
+}: {
+  ngoAddress: string;
+  ngoId?: string;
+  ngoName?: string;
+}) {
   const router = useRouter();
-  const { address, signTransaction } = useWallet();
+  const { address } = useWallet();
   const { client, ready } = useDonationVaultClient();
 
   const [tokenChoice, setTokenChoice] = useState<TokenChoice>('native');
@@ -37,6 +56,12 @@ export function CreateStreamForm({ ngoAddress, ngoId }: { ngoAddress: string; ng
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [streamId, setStreamId] = useState<string | null>(null);
   const [estimatedFee, setEstimatedFee] = useState<string | null>(null);
+  // Computed once, at the moment the confirmation step opens (inside the
+  // handleSubmit event handler below), rather than derived from Date.now()
+  // directly in render — reading the clock during render is an impure,
+  // unstable read that can differ across re-renders of the same "confirm
+  // this" snapshot.
+  const [confirmationEndDate, setConfirmationEndDate] = useState<Date | null>(null);
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
 
@@ -88,6 +113,7 @@ export function CreateStreamForm({ ngoAddress, ngoId }: { ngoAddress: string; ng
     isTokenValid &&
     !insufficientBalance &&
     submitState !== 'signing' &&
+    submitState !== 'confirming' &&
     ready;
 
   useEffect(() => {
@@ -117,10 +143,29 @@ export function CreateStreamForm({ ngoAddress, ngoId }: { ngoAddress: string; ng
     };
   }, [address, selectedTokenAddress]);
 
-  async function handleSubmit(event: FormEvent): Promise<void> {
+  const durationLabel =
+    DURATIONS.find((d) => d.seconds === durationSeconds)?.label ?? `${durationSeconds}s`;
+
+  // Intercepts the flow before the contract call: pressing "Review & Sign"
+  // only opens the confirmation summary. The actual create_stream call
+  // (previously fired straight from here) now lives in handleConfirm,
+  // gated behind that extra step so a donor sees NGO/token/amount/rate/end
+  // date before their wallet ever prompts for a signature.
+  function handleSubmit(event: FormEvent): void {
     event.preventDefault();
+    if (!canSubmit) {
+      return;
+    }
+    setConfirmationEndDate(new Date(Date.now() + durationSeconds * 1000));
+    setSubmitState('confirming');
+  }
+
+  function handleCancelConfirmation(): void {
+    setSubmitState('idle');
+  }
+
+  async function handleConfirm(): Promise<void> {
     if (
-      !canSubmit ||
       !address ||
       !client ||
       !selectedTokenAddress ||
@@ -239,7 +284,7 @@ export function CreateStreamForm({ ngoAddress, ngoId }: { ngoAddress: string; ng
               placeholder="Token contract address (C...)"
               aria-invalid={!isCustomTokenFormatValid || undefined}
               aria-describedby={!isCustomTokenFormatValid ? 'custom-token-error' : undefined}
-              className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+              className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:focus-visible:ring-teal-400"
             />
             {!isCustomTokenFormatValid && (
               <p id="custom-token-error" className="mt-1 text-sm text-amber-600 dark:text-amber-400">
@@ -262,8 +307,21 @@ export function CreateStreamForm({ ngoAddress, ngoId }: { ngoAddress: string; ng
           placeholder="100"
           aria-invalid={isAmountValid && !isRateValid || undefined}
           aria-describedby={isAmountValid && !isRateValid ? 'amount-error' : undefined}
-          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:focus-visible:ring-teal-400"
         />
+        <div className="mt-2 flex flex-wrap gap-2">
+          {PRESET_AMOUNTS.map((preset) => (
+            <button
+              key={preset}
+              type="button"
+              onClick={() => setAmount(String(preset))}
+              aria-label={`Set amount to ${preset}`}
+              className="rounded-md border border-gray-300 px-3 py-1 text-xs font-medium hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:hover:bg-gray-800 dark:focus-visible:ring-teal-400"
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
         <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
           {balanceLoading
             ? 'Checking wallet balance…'
@@ -283,7 +341,7 @@ export function CreateStreamForm({ ngoAddress, ngoId }: { ngoAddress: string; ng
         <select
           value={durationSeconds}
           onChange={(event) => setDurationSeconds(Number(event.target.value))}
-          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="mt-2 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:focus-visible:ring-teal-400"
         >
           {DURATIONS.map((d) => (
             <option key={d.seconds} value={d.seconds}>
@@ -322,15 +380,155 @@ export function CreateStreamForm({ ngoAddress, ngoId }: { ngoAddress: string; ng
       <button
         type="submit"
         disabled={!canSubmit}
-        className="w-full rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200"
+        className="w-full rounded-md bg-black px-6 py-3 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:focus-visible:ring-teal-400"
       >
         {submitState === 'signing'
           ? 'Confirm in your wallet…'
-          : !ready
-            ? 'Preparing contract…'
-            : 'Review & Sign'}
+          : submitState === 'confirming'
+            ? 'Reviewing…'
+            : !ready
+              ? 'Preparing contract…'
+              : 'Review & Sign'}
       </button>
+
+      {submitState === 'confirming' && confirmationEndDate && (
+        <ConfirmDonationSummary
+          ngoLabel={ngoName ?? ngoAddress}
+          tokenLabel={TOKEN_LABELS[tokenChoice]}
+          amount={amount}
+          rateRaw={rateRaw}
+          durationLabel={durationLabel}
+          effectiveEndDate={confirmationEndDate}
+          onConfirm={() => void handleConfirm()}
+          onCancel={handleCancelConfirmation}
+        />
+      )}
     </form>
+    </div>
+  );
+}
+
+/**
+ * The confirmation step gating create_stream's actual contract call (see
+ * CreateStreamForm.handleSubmit/handleConfirm). Structured the same way as
+ * StreamDetailsModal (fixed overlay, role="dialog", Escape-to-close, focus
+ * moved to the dialog and restored to the trigger on close) rather than
+ * introducing a separate shared Modal primitive — there's exactly one other
+ * modal in this codebase and it isn't itself built on a shared primitive,
+ * so extracting one now would be speculative rather than justified by
+ * actual reuse.
+ */
+function ConfirmDonationSummary({
+  ngoLabel,
+  tokenLabel,
+  amount,
+  rateRaw,
+  durationLabel,
+  effectiveEndDate,
+  onConfirm,
+  onCancel,
+}: {
+  ngoLabel: string;
+  tokenLabel: string;
+  amount: string;
+  rateRaw: bigint | null;
+  durationLabel: string;
+  effectiveEndDate: Date;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const confirmButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const triggerElement = document.activeElement as HTMLElement | null;
+    confirmButtonRef.current?.focus();
+
+    return () => {
+      if (triggerElement && typeof triggerElement.focus === 'function') {
+        triggerElement.focus();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        onCancel();
+      }
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
+
+  const perSecondRate =
+    rateRaw !== null ? `${(Number(rateRaw) / 10 ** TOKEN_DECIMALS).toFixed(7)} / second` : '—';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onCancel}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-donation-heading"
+        className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-gray-900"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <h2 id="confirm-donation-heading" className="text-lg font-semibold">
+          Confirm your stream
+        </h2>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          Review the details below before signing in your wallet.
+        </p>
+
+        <dl className="mt-6 space-y-4 text-sm">
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-gray-500 dark:text-gray-400">NGO</dt>
+            <dd className="break-all text-right font-medium">{ngoLabel}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-gray-500 dark:text-gray-400">Token</dt>
+            <dd className="font-medium">{tokenLabel}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-gray-500 dark:text-gray-400">Total amount</dt>
+            <dd className="font-medium">{amount}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-gray-500 dark:text-gray-400">Rate</dt>
+            <dd className="font-medium">{perSecondRate}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-gray-500 dark:text-gray-400">Duration</dt>
+            <dd className="font-medium">{durationLabel}</dd>
+          </div>
+          <div className="flex items-center justify-between gap-4">
+            <dt className="text-gray-500 dark:text-gray-400">Ends</dt>
+            <dd className="font-medium">{effectiveEndDate.toLocaleString()}</dd>
+          </div>
+        </dl>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:hover:bg-gray-800 dark:focus-visible:ring-teal-400"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            ref={confirmButtonRef}
+            onClick={onConfirm}
+            className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:focus-visible:ring-teal-400"
+          >
+            Confirm &amp; Sign
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

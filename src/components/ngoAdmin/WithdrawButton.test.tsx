@@ -38,6 +38,16 @@ describe('WithdrawButton', () => {
     vi.mocked(useDonationVaultClient).mockReturnValue({ client: { withdraw } as never, ready: true });
   });
 
+  it('has a visible focus-visible ring', () => {
+    render(<WithdrawButton streamOnChainId="1" onWithdrawn={vi.fn()} />);
+
+    expect(screen.getByRole('button', { name: 'Withdraw' })).toHaveClass(
+      'focus-visible:outline-none',
+      'focus-visible:ring-2',
+      'focus-visible:ring-teal-600',
+    );
+  });
+
   it('disables the button and shows a loading label while the contract client is not ready', () => {
     vi.mocked(useDonationVaultClient).mockReturnValue({ client: null, ready: false });
 
