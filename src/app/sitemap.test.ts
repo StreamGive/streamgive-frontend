@@ -54,6 +54,34 @@ describe('sitemap', () => {
     expect(getNgos).toHaveBeenCalledTimes(1);
   });
 
+  it('includes all static pages with correct priorities and change frequencies', async () => {
+    const { default: sitemap } = await import('./sitemap');
+    const entries = await sitemap();
+
+    expect(entries.slice(0, 4)).toEqual([
+      expect.objectContaining({
+        url: BASE_URL,
+        changeFrequency: 'daily',
+        priority: 1,
+      }),
+      expect.objectContaining({
+        url: `${BASE_URL}/ngos`,
+        changeFrequency: 'daily',
+        priority: 0.8,
+      }),
+      expect.objectContaining({
+        url: `${BASE_URL}/impact`,
+        changeFrequency: 'daily',
+        priority: 0.8,
+      }),
+      expect.objectContaining({
+        url: `${BASE_URL}/apply`,
+        changeFrequency: 'monthly',
+        priority: 0.5,
+      }),
+    ]);
+  });
+
   it('lists the static pages and verified NGOs only', async () => {
     vi.mocked(getNgos).mockResolvedValue([
       makeNgo('unverified-1', false),
