@@ -4,6 +4,10 @@ import type { NgoApplication } from './api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
+/** Same budget as the public API layer — long enough for a slow node, short
+ * enough that the admin page doesn't hang forever on a dead endpoint. */
+const ADMIN_TIMEOUT_MS = 10_000;
+
 /** The backend accepts a signature within MAX_CLOCK_SKEW_MS (5 minutes) of
   * its timestamp, so one we just made stays valid for that long. Reused up
   * to a minute short of the limit, to leave room for clock drift between
@@ -63,6 +67,7 @@ async function adminFetch(
         'x-admin-timestamp': cached.timestamp,
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,
+      signal: AbortSignal.timeout(ADMIN_TIMEOUT_MS),
     });
 
   const { cached, wasReused } = await getSignature(cacheKey, method, path, signMessage);
@@ -84,7 +89,7 @@ async function adminFetch(
 
 /** The paginated envelope GET /ngo-applications responds with. The other
   * list endpoints return bare arrays; this one does not. */
-type NgoApplicationPage = {
+export type NgoApplicationPage = {
   applications: NgoApplication[];
   total: number;
   limit: number;
@@ -95,8 +100,14 @@ export async function listNgoApplications(
   address: string,
   signMessage: WalletSignMessage,
   status?: 'PENDING' | 'APPROVED' | 'REJECTED',
-): Promise<NgoApplication[]> {
-  const path = status ? `/ngo-applications?status=${status}` : '/ngo-applications';
+  offset = 0,
+): Promise<NgoApplicationPage> {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (offset > 0) params.set('offset', String(offset));
+  const query = params.toString();
+  const path = `/ngo-applications${query ? `?${query}` : ''}`;
+
   const res = await adminFetch('GET', path, address, signMessage);
   if (!res.ok) {
     throw new Error(`Failed to fetch applications: ${res.status}`);
@@ -115,7 +126,7 @@ export async function listNgoApplications(
     );
   }
 
-  return body.applications;
+  return body;
 }
 
 export async function reviewNgoApplication(

@@ -64,6 +64,8 @@ vi.mock('@/lib/ngoRegistryClient', () => ({
       revoke_ngo: revokeNgoMock,
     },
     ready: true,
+    initError: null,
+    retryInit: vi.fn(),
   }),
 }));
 
@@ -74,12 +76,12 @@ describe('PlatformAdminPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getNgos.mockResolvedValue([]);
-    listNgoApplications.mockResolvedValue([]);
+    listNgoApplications.mockResolvedValue({ applications: [], total: 0, limit: 100, offset: 0 });
   });
 
   describe('approve flow', () => {
     it('approves an application on-chain and off-chain, shows success toast, and refreshes', async () => {
-      listNgoApplications.mockResolvedValueOnce([APPLICATION]).mockResolvedValueOnce([]);
+      listNgoApplications.mockResolvedValueOnce({ applications: [APPLICATION], total: 1, limit: 100, offset: 0 }).mockResolvedValueOnce({ applications: [], total: 0, limit: 100, offset: 0 });
       const signAndSend = vi.fn().mockResolvedValue({});
       approveNgoMock.mockResolvedValue({ signAndSend, built: { fee: '100' } });
       reviewNgoApplication.mockResolvedValue({});
@@ -104,7 +106,7 @@ describe('PlatformAdminPage', () => {
     });
 
     it('shows error toast when on-chain approval fails and skips off-chain review', async () => {
-      listNgoApplications.mockResolvedValueOnce([APPLICATION]);
+      listNgoApplications.mockResolvedValueOnce({ applications: [APPLICATION], total: 1, limit: 100, offset: 0 });
       approveNgoMock.mockRejectedValue(new Error('On-chain approval rejected'));
 
       const user = userEvent.setup();
@@ -120,7 +122,7 @@ describe('PlatformAdminPage', () => {
 
   describe('reject flow', () => {
     it('asks for confirmation, then calls reviewNgoApplication with reject, shows toast and refreshes', async () => {
-      listNgoApplications.mockResolvedValueOnce([APPLICATION]).mockResolvedValueOnce([]);
+      listNgoApplications.mockResolvedValueOnce({ applications: [APPLICATION], total: 1, limit: 100, offset: 0 }).mockResolvedValueOnce({ applications: [], total: 0, limit: 100, offset: 0 });
       const user = userEvent.setup();
 
       render(<PlatformAdminPage />);
@@ -143,7 +145,7 @@ describe('PlatformAdminPage', () => {
     });
 
     it('cancels rejection when clicking Never mind', async () => {
-      listNgoApplications.mockResolvedValueOnce([APPLICATION]);
+      listNgoApplications.mockResolvedValueOnce({ applications: [APPLICATION], total: 1, limit: 100, offset: 0 });
       const user = userEvent.setup();
 
       render(<PlatformAdminPage />);
@@ -158,7 +160,7 @@ describe('PlatformAdminPage', () => {
     });
 
     it('shows error toast when reject review fails', async () => {
-      listNgoApplications.mockResolvedValueOnce([APPLICATION]);
+      listNgoApplications.mockResolvedValueOnce({ applications: [APPLICATION], total: 1, limit: 100, offset: 0 });
       reviewNgoApplication.mockRejectedValue(new Error('API reject failed'));
 
       const user = userEvent.setup();

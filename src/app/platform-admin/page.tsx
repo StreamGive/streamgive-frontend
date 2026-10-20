@@ -17,13 +17,15 @@ import { useLatestRequest } from '@/lib/useLatestRequest';
 
 export default function PlatformAdminPage() {
   const { address, signMessage } = useWallet();
-  const { client, ready } = useNgoRegistryClient();
+  const { client, ready, initError, retryInit } = useNgoRegistryClient();
   const { showToast } = useToast();
   const [applications, setApplications] = useState<NgoApplication[]>([]);
+  const [totalApplications, setTotalApplications] = useState(0);
   const [verifiedNgos, setVerifiedNgos] = useState<Ngo[]>([]);
   // Starts true so the "no applications" state isn't painted before the
   // first fetch begins.
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmingRejectId, setConfirmingRejectId] = useState<string | null>(null);
@@ -45,12 +47,13 @@ export default function PlatformAdminPage() {
     setLoading(true);
     setError(null);
     try {
-      const [apps, ngos] = await Promise.all([
+      const [page, ngos] = await Promise.all([
         listNgoApplications(address, signMessage, statusFilter),
         getNgos(request.signal),
       ]);
       if (!request.isCurrent()) return;
-      setApplications(apps);
+      setApplications(page.applications);
+      setTotalApplications(page.total);
       setVerifiedNgos(ngos.filter(n => n.verified));
     } catch (err) {
       if (!request.isCurrent()) return;
@@ -74,6 +77,23 @@ export default function PlatformAdminPage() {
     void refresh();
   }, [refresh]);
 
+  async function handleLoadMore(): Promise<void> {
+    if (!address) return;
+    setLoadingMore(true);
+    try {
+      const page = await listNgoApplications(address, signMessage, statusFilter, applications.length);
+      // Append — don't replace — so rows already visible stay put.
+      setApplications((prev) => [...prev, ...page.applications]);
+      setTotalApplications(page.total);
+    } catch (err) {
+      showToast('error', err instanceof Error ? err.message : 'Failed to load more applications.');
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  const [retryApprovingId, setRetryApprovingId] = useState<string | null>(null);
+
   async function handleApprove(app: NgoApplication): Promise<void> {
     if (!address || !client) return;
     setBusyId(app.id);
@@ -83,19 +103,39 @@ export default function PlatformAdminPage() {
       // tx fails, we deliberately haven't touched the off-chain review
       // status yet — better an application stuck "pending" than one
       // marked "approved" while the NGO is still unverified on-chain.
-      const tx = await client.approve_ngo({ ngo_owner: app.ownerAddress });
-      setEstimatedFee(formatEstimatedFee(tx.built?.fee));
-      await tx.signAndSend();
+      if (!retryApprovingId || retryApprovingId !== app.id) {
+        // First-time or non-retry: do the on-chain call.
+        const tx = await client.approve_ngo({ ngo_owner: app.ownerAddress });
+        setEstimatedFee(formatEstimatedFee(tx.built?.fee));
+        await tx.signAndSend();
+      }
 
+      // Now mark off-chain. If this fails, the NGO is already verified on-chain
+      // but the app is still PENDING — surface a targeted retry action.
       await reviewNgoApplication(address, signMessage, app.id, 'approve', reviewNotes[app.id]);
       showToast('success', `${app.name} approved.`);
+      setRetryApprovingId(null);
       await refresh();
     } catch (err) {
-      showToast('error', err instanceof Error ? err.message : 'Something went wrong.');
+      const message = err instanceof Error ? err.message : 'Something went wrong.';
+      // If we're already retrying and hit an error, or if the on-chain part
+      // succeeded but off-chain failed, show the retry-marking-approved action.
+      if (retryApprovingId === app.id || message.includes('review')) {
+        showToast('error', `Couldn't mark as approved: ${message}`);
+        setRetryApprovingId(app.id);
+      } else {
+        showToast('error', message);
+        setRetryApprovingId(null);
+      }
     } finally {
       setBusyId(null);
       setEstimatedFee(null);
     }
+  }
+
+  function handleRetryMarkApproved(app: NgoApplication): void {
+    setRetryApprovingId(app.id);
+    void handleApprove(app);
   }
 
   async function handleReject(app: NgoApplication): Promise<void> {
@@ -142,6 +182,19 @@ export default function PlatformAdminPage() {
 
         {!address && (
           <ConnectWalletPrompt className="mt-8" message="Connect the platform admin wallet." />
+        )}
+
+        {address && initError && (
+          <div className="mt-8">
+            <p className="text-red-600 dark:text-red-400">{initError}</p>
+            <button
+              type="button"
+              onClick={retryInit}
+              className="mt-3 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+            >
+              Retry
+            </button>
+          </div>
         )}
 
         {address && (
@@ -273,6 +326,21 @@ export default function PlatformAdminPage() {
                         </>
                       )}
                     </div>
+                    {retryApprovingId === app.id && (
+                      <div className="flex flex-wrap items-center justify-end gap-2 rounded-md bg-amber-50 p-2 dark:bg-amber-900/20">
+                        <span className="text-xs text-amber-900 dark:text-amber-200">
+                          NGO verified on-chain but couldn't mark approved in the system.
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => void handleRetryMarkApproved(app)}
+                          disabled={busyId === app.id}
+                          className="rounded bg-amber-600 px-2 py-1 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50 dark:bg-amber-500 dark:hover:bg-amber-600"
+                        >
+                          {busyId === app.id ? 'Retrying…' : 'Retry marking approved'}
+                        </button>
+                      </div>
+                    )}
                       </>
                     ) : (
                       <div>
@@ -289,6 +357,21 @@ export default function PlatformAdminPage() {
               </li>
             ))}
           </ul>
+        )}
+
+        {address && !loading && applications.length > 0 && applications.length < totalApplications && (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              onClick={() => void handleLoadMore()}
+              disabled={loadingMore}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+            >
+              {loadingMore
+                ? 'Loading…'
+                : `Load more (${applications.length} of ${totalApplications})`}
+            </button>
+          </div>
         )}
 
         {address && !loading && !error && (
