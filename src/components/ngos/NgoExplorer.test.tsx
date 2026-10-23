@@ -114,6 +114,34 @@ describe('NgoExplorer', () => {
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(15);
   });
 
+  it('restores the sort from the URL on mount', () => {
+    mockSearchParams = new URLSearchParams('sort=most-active-streams');
+    const ngos = [
+      makeNgo({ id: 'a', name: 'Alpha', stats: { totalCommitted: '0', totalWithdrawn: '0', activeStreamCount: 1, donorCount: 0 } }),
+      makeNgo({ id: 'b', name: 'Beta', stats: { totalCommitted: '0', totalWithdrawn: '0', activeStreamCount: 5, donorCount: 0 } }),
+      makeNgo({ id: 'c', name: 'Gamma', stats: { totalCommitted: '0', totalWithdrawn: '0', activeStreamCount: 3, donorCount: 0 } }),
+    ];
+    render(<NgoExplorer ngos={ngos} />);
+
+    expect(screen.getByRole('combobox')).toHaveValue('most-active-streams');
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings).toEqual(['Beta', 'Gamma', 'Alpha']);
+  });
+
+  it('writes the sort to the URL when changed (and clears page)', () => {
+    mockSearchParams = new URLSearchParams('q=Water&page=2');
+    const ngos = buildNgos();
+    render(<NgoExplorer ngos={ngos} />);
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'most-committed' } });
+
+    expect(mockReplace).toHaveBeenLastCalledWith(
+      '/ngos?q=Water&sort=most-committed',
+      { scroll: false },
+    );
+  });
+
   it('shows an empty state when the search matches nothing', () => {
     const ngos = buildNgos();
     render(<NgoExplorer ngos={ngos} />);
