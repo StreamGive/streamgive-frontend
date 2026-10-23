@@ -64,6 +64,10 @@ route exists specifically to be iframed on NGOs' own sites. See
 [docs/EMBED.md](./docs/EMBED.md) for the full integration guide (sizing,
 security headers, and WordPress/Webflow/plain-HTML examples).
 
+See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) for the full step-by-step
+guide to both platforms, including every `--build-arg` Docker needs and a
+complete table of which `NEXT_PUBLIC_*` values are required vs. optional.
+
 ## Authentication
 
 The platform admin panel (`/platform-admin`) has no separate login — it

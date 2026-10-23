@@ -438,6 +438,12 @@ describe('DashboardPage', () => {
       expect(downloaded).toHaveLength(1);
       expect(downloaded[0].download).toBe('streamgive-donations.csv');
       expect(downloaded[0].href).toBe('blob:streamgive-csv');
+
+      // The object URL is revoked a second after the click (not
+      // synchronously), so the download isn't cancelled by the URL
+      // disappearing too soon — see downloadDonationHistoryCsv.
+      expect(revokeObjectURL).not.toHaveBeenCalled();
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       expect(revokeObjectURL).toHaveBeenCalledWith('blob:streamgive-csv');
     });
   });

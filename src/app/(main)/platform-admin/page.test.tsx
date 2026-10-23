@@ -92,7 +92,14 @@ describe('PlatformAdminPage', () => {
       const approveButton = await screen.findByRole('button', { name: 'Approve' });
       await user.click(approveButton);
 
+      // First click only builds the tx (for the fee estimate) and shows the
+      // confirm panel — nothing is signed yet.
       expect(approveNgoMock).toHaveBeenCalledWith({ ngo_owner: APPLICATION.ownerAddress });
+      expect(signAndSend).not.toHaveBeenCalled();
+
+      const confirmButton = await screen.findByRole('button', { name: 'Yes, approve' });
+      await user.click(confirmButton);
+
       expect(signAndSend).toHaveBeenCalled();
       expect(reviewNgoApplication).toHaveBeenCalledWith(
         ADMIN_ADDRESS,

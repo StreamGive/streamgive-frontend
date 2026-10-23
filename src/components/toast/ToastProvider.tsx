@@ -65,14 +65,6 @@ export function ToastProvider({
   // reconnects.
   const toastsRef = useRef<Toast[]>([]);
 
-  // One announced string per politeness level, rendered into a region
-  // that's in the DOM from first render. A live region usually only
-  // reliably announces content that changes *inside* it after it already
-  // exists — inserting a brand-new element that already carries
-  // role="status"/aria-live is the pattern assistive tech often misses.
-  const [politeAnnouncement, setPoliteAnnouncement] = useState('');
-  const [assertiveAnnouncement, setAssertiveAnnouncement] = useState('');
-
   // Per-toast auto-dismiss timers, so hover/focus can pause and later
   // restart one without touching the others (WCAG 2.2.1 Timing Adjustable —
   // error messages in particular can be too long to read in 5s).
@@ -117,14 +109,6 @@ export function ToastProvider({
     [clearTimer],
   );
 
-  const announce = useCallback((type: ToastType, text: string) => {
-    if (type === 'error') {
-      setAssertiveAnnouncement(text);
-    } else {
-      setPoliteAnnouncement(text);
-    }
-  }, []);
-
   const showToast = useCallback(
     (type: ToastType, message: string, action?: ToastAction) => {
       const current = toastsRef.current;
@@ -139,7 +123,6 @@ export function ToastProvider({
         next[duplicateIndex] = updated;
         setToastsAndRef(next);
         scheduleDismiss(existing.id);
-        announce(type, `${message} (×${updated.count})`);
         return;
       }
 
@@ -152,17 +135,17 @@ export function ToastProvider({
       }
       setToastsAndRef(next);
       scheduleDismiss(id);
-      announce(type, message);
     },
-    [announce, clearTimer, scheduleDismiss, setToastsAndRef],
+    [clearTimer, scheduleDismiss, setToastsAndRef],
   );
 
   // Timers must not outlive the provider — nothing is left to call
   // dismissToast once this unmounts.
   useEffect(() => {
+    const map = timers.current;
     return () => {
-      timers.current.forEach((timer) => clearTimeout(timer));
-      timers.current.clear();
+      map.forEach((timer) => clearTimeout(timer));
+      map.clear();
     };
   }, []);
 
@@ -170,22 +153,18 @@ export function ToastProvider({
     <ToastContext.Provider value={{ showToast }}>
       {children}
       {!hideHost && (
-        <>
-          <div aria-live="polite" aria-atomic="true" className="sr-only">
-            {politeAnnouncement}
-          </div>
-          <div aria-live="assertive" aria-atomic="true" className="sr-only">
-            {assertiveAnnouncement}
-          </div>
-
-          <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
+        // aria-live lives on this wrapper rather than each toast: the
+        // wrapper is unconditionally mounted from first render (never
+        // toggled by toasts.length), so it's already in the accessibility
+        // tree before any toast is added — the mutation a screen reader
+        // needs to notice happens *inside* an existing live region, which
+        // is the reliable pattern. Each toast keeps its own role for
+        // severity (status vs. alert), so this doesn't duplicate the
+        // message text anywhere — there is exactly one copy of it in the DOM.
+        <div aria-live="polite" aria-atomic="false" className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
             {toasts.map((toast) => (
               <div
                 key={toast.id}
-                // Belt-and-suspenders alongside the two persistent regions
-                // above: harmless if some AT also picks these up directly,
-                // and keeps each toast's urgency conveyed even by tooling
-                // that reads role semantics rather than aria-live mutations.
                 role={toast.type === 'error' ? 'alert' : 'status'}
                 onMouseEnter={() => pauseDismiss(toast.id)}
                 onMouseLeave={() => scheduleDismiss(toast.id)}
@@ -219,8 +198,7 @@ export function ToastProvider({
                 </button>
               </div>
             ))}
-          </div>
-        </>
+        </div>
       )}
     </ToastContext.Provider>
   );
