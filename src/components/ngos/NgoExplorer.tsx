@@ -32,6 +32,14 @@ function parsePage(value: string | null): number {
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
+// Only a non-default sort is carried in the URL; 'newest' is the implicit
+// default and is omitted to keep shared links tidy.
+const SORT_OPTIONS: readonly SortOption[] = ['newest', 'most-active-streams', 'most-committed'];
+
+function parseSort(value: string | null): SortOption {
+  return SORT_OPTIONS.includes(value as SortOption) ? (value as SortOption) : 'newest';
+}
+
 export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -39,7 +47,7 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
 
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
   const [page, setPage] = useState(() => parsePage(searchParams.get('page')));
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [sortBy, setSortBy] = useState<SortOption>(() => parseSort(searchParams.get('sort')));
 
   // Sync incoming URL changes before rendering, while keeping immediate
   // local updates from the handlers below until navigation completes.
@@ -49,14 +57,15 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
     setPreviousQueryString(queryString);
     setSearchQuery(searchParams.get('q') ?? '');
     setPage(parsePage(searchParams.get('page')));
+    setSortBy(parseSort(searchParams.get('sort')));
   }
 
   const visibleCount = page * PAGE_SIZE;
 
-  // Only q and page are synced (see acceptance criteria) — sort stays
-  // local. Replaced rather than pushed so search-as-you-type doesn't fill
-  // the back-button history with one entry per keystroke.
-  function syncParams(next: { q?: string; page?: number }): void {
+  // q, page and sort are synced to the URL so links/back-forward preserve
+  // the full explorer state. router.replace (not push) so search-as-you-type
+  // doesn't fill history with one entry per keystroke.
+  function syncParams(next: { q?: string; page?: number; sort?: SortOption }): void {
     const params = new URLSearchParams(searchParams.toString());
 
     if (next.q !== undefined) {
@@ -71,6 +80,13 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
         params.set('page', String(next.page));
       } else {
         params.delete('page');
+      }
+    }
+    if (next.sort !== undefined) {
+      if (next.sort !== 'newest') {
+        params.set('sort', next.sort);
+      } else {
+        params.delete('sort');
       }
     }
 
@@ -98,7 +114,7 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
   function handleSortChange(value: SortOption): void {
     setSortBy(value);
     setPage(1);
-    syncParams({ page: 1 });
+    syncParams({ sort: value, page: 1 });
   }
 
   function handleLoadMore(): void {
