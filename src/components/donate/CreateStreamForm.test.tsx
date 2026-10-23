@@ -425,6 +425,21 @@ describe('CreateStreamForm', () => {
     expect(mockGetTokenBalance).toHaveBeenCalledWith('CUSDCFAKE', DONOR_ADDRESS);
   });
 
+  it('shows a retry message instead of a balance when the check fails, and recovers on retry', async () => {
+    const user = userEvent.setup();
+    mockGetTokenBalance.mockRejectedValueOnce(new Error('simulation failed'));
+    render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+    expect(await screen.findByText(/couldn't check your balance/i)).toBeInTheDocument();
+    expect(screen.queryByText(/wallet balance:/i)).not.toBeInTheDocument();
+
+    mockGetTokenBalance.mockResolvedValueOnce('50000000000'); // 5,000
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText(/wallet balance: 5,000/i)).toBeInTheDocument();
+    expect(screen.queryByText(/couldn't check your balance/i)).not.toBeInTheDocument();
+  });
+
   it('warns and disables submit when the entered amount exceeds the wallet balance', async () => {
     mockGetTokenBalance.mockResolvedValue('500000000'); // 50
 

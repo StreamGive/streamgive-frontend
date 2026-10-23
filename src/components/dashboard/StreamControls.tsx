@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useToast } from '@/components/toast/ToastProvider';
 import { useWallet } from '@/components/wallet/WalletProvider';
@@ -63,6 +63,52 @@ export function StreamControls({
   const [modifyStartedAt, setModifyStartedAt] = useState(0);
   const [topUpAmount, setTopUpAmount] = useState('');
   const [estimatedFee, setEstimatedFee] = useState<string | null>(null);
+
+  // Each mode replaces the whole subtree below, so switching modes unmounts
+  // whatever had focus — without this, focus falls back to <body>. Each
+  // ref points at the control that mode-switch should land focus on: the
+  // new mode's first control when entering one, or the idle trigger that
+  // opened it when backing out (idleContainerRef is the fallback for when
+  // that trigger is mid-action and disabled, e.g. right after submitting).
+  const idleContainerRef = useRef<HTMLDivElement>(null);
+  const topUpButtonRef = useRef<HTMLButtonElement>(null);
+  const modifyButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const topUpAmountInputRef = useRef<HTMLInputElement>(null);
+  const modifyDurationSelectRef = useRef<HTMLSelectElement>(null);
+  const confirmCancelButtonRef = useRef<HTMLButtonElement>(null);
+  const previousModeRef = useRef<Mode>(mode);
+
+  useEffect(() => {
+    const previousMode = previousModeRef.current;
+    previousModeRef.current = mode;
+    if (mode === previousMode) return;
+
+    if (mode === 'toppingUp') {
+      topUpAmountInputRef.current?.focus();
+    } else if (mode === 'modifying') {
+      modifyDurationSelectRef.current?.focus();
+    } else if (mode === 'confirmingCancel') {
+      confirmCancelButtonRef.current?.focus();
+    } else {
+      const trigger =
+        previousMode === 'toppingUp'
+          ? topUpButtonRef.current
+          : previousMode === 'modifying'
+            ? modifyButtonRef.current
+            : previousMode === 'confirmingCancel'
+              ? cancelButtonRef.current
+              : null;
+      // A trigger that just submitted its action is disabled (pending !==
+      // null) by the time this runs — a disabled button can't take focus,
+      // so the live region announcing that progress is the next best thing.
+      if (trigger && !trigger.disabled) {
+        trigger.focus();
+      } else {
+        idleContainerRef.current?.focus();
+      }
+    }
+  }, [mode]);
 
   const topUpAmountRaw = parseAmount(topUpAmount);
   const topUpAmountError = describeAmountError(topUpAmount);
@@ -170,6 +216,7 @@ export function StreamControls({
       <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-2">
           <input
+            ref={topUpAmountInputRef}
             type="number"
             min="0"
             step="any"
@@ -213,6 +260,7 @@ export function StreamControls({
           Cancel this stream? This can&apos;t be undone.
         </span>
         <button
+          ref={confirmCancelButtonRef}
           type="button"
           onClick={() => void handleCancel()}
           className="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:bg-red-500 dark:hover:bg-red-600 dark:focus-visible:ring-teal-400"
@@ -238,6 +286,7 @@ export function StreamControls({
       <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-2">
           <select
+            ref={modifyDurationSelectRef}
             value={durationSeconds}
             onChange={(event) => {
               setDurationSeconds(Number(event.target.value));
@@ -279,9 +328,11 @@ export function StreamControls({
 
   return (
     <div
+      ref={idleContainerRef}
       role="status"
       aria-live="polite"
-      className="flex flex-wrap items-center justify-end gap-2"
+      tabIndex={-1}
+      className="flex flex-wrap items-center justify-end gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400"
     >
       {!ready && (
         <span className="text-xs text-gray-600 dark:text-gray-400">
@@ -292,6 +343,7 @@ export function StreamControls({
         <span className="text-xs text-gray-500 dark:text-gray-400">Fee {estimatedFee}</span>
       )}
       <button
+        ref={topUpButtonRef}
         type="button"
         onClick={() => setMode('toppingUp')}
         disabled={pending !== null || !ready}
@@ -300,6 +352,7 @@ export function StreamControls({
         {pending === 'topUp' ? 'Topping up…' : 'Top up'}
       </button>
       <button
+        ref={modifyButtonRef}
         type="button"
         onClick={() => {
           setModifyStartedAt(Date.now());
@@ -311,6 +364,7 @@ export function StreamControls({
         {pending === 'modifyRate' ? 'Updating…' : 'Modify rate'}
       </button>
       <button
+        ref={cancelButtonRef}
         type="button"
         onClick={() => setMode('confirmingCancel')}
         disabled={pending !== null || !ready}

@@ -75,6 +75,13 @@ export function CreateStreamForm({
   const submitButtonRef = useRef<HTMLButtonElement>(null);
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  // getTokenBalance throws rather than resolving null on failure (a wrong
+  // network, an RPC outage and a non-token address all look identical
+  // otherwise) — balanceError means "couldn't check", distinct from
+  // walletBalance simply not having resolved yet. retryKey re-runs the
+  // lookup without otherwise changing the effect's dependencies.
+  const [balanceError, setBalanceError] = useState(false);
+  const [balanceRetryKey, setBalanceRetryKey] = useState(0);
   // Native XLM and USDC are both Stellar Asset Contracts, which always use 7
   // decimals, but a custom token can declare any value here — tokenDecimals
   // is that token's real scale once looked up (issue #204). null means
@@ -201,17 +208,25 @@ export function CreateStreamForm({
     if (!address || !selectedTokenAddress) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setWalletBalance(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBalanceError(false);
       return;
     }
 
     let cancelled = false;
     setBalanceLoading(true);
     setWalletBalance(null);
+    setBalanceError(false);
 
     getTokenBalance(selectedTokenAddress, address)
       .then((balance) => {
         if (!cancelled) {
           setWalletBalance(balance);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBalanceError(true);
         }
       })
       .finally(() => {
@@ -223,7 +238,7 @@ export function CreateStreamForm({
     return () => {
       cancelled = true;
     };
-  }, [address, selectedTokenAddress]);
+  }, [address, selectedTokenAddress, balanceRetryKey]);
 
   const durationLabel =
     DURATIONS.find((d) => d.seconds === durationSeconds)?.label ?? `${durationSeconds}s`;
@@ -460,6 +475,18 @@ export function CreateStreamForm({
               ? `Wallet balance: ${formatAmount(walletBalance, tokenDecimals ?? TOKEN_DECIMALS)}`
               : null}
         </p>
+        {balanceError && (
+          <p className="mt-1 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+            Couldn&apos;t check your balance.
+            <button
+              type="button"
+              onClick={() => setBalanceRetryKey((key) => key + 1)}
+              className="font-medium underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400"
+            >
+              Retry
+            </button>
+          </p>
+        )}
         {insufficientBalance && (
           <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
             This exceeds your wallet balance — the transaction will fail.

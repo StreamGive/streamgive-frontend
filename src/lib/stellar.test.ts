@@ -183,28 +183,32 @@ describe('getTokenBalance', () => {
     expect(scValToNative).toHaveBeenCalledWith(retval);
   });
 
-  it('returns null when the simulation reports an error', async () => {
+  it('rejects when the simulation reports an error, instead of returning null', async () => {
     simulateTransaction.mockResolvedValue({ error: 'contract trap' });
     isSimulationError.mockReturnValue(true);
 
     const { getTokenBalance } = await freshStellar(TESTNET_PASSPHRASE);
-    expect(await getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS)).toBeNull();
+    await expect(getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS)).rejects.toThrow();
     expect(scValToNative).not.toHaveBeenCalled();
   });
 
-  it('returns null when the simulation succeeds but has no result', async () => {
+  it('rejects when the simulation succeeds but has no result', async () => {
     simulateTransaction.mockResolvedValue({});
 
     const { getTokenBalance } = await freshStellar(TESTNET_PASSPHRASE);
-    expect(await getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS)).toBeNull();
+    await expect(getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS)).rejects.toThrow();
     expect(scValToNative).not.toHaveBeenCalled();
   });
 
-  it('returns null when simulateTransaction throws', async () => {
+  // The RPC outage / wrong-network case: simulateTransaction itself throws,
+  // as opposed to resolving with a simulation-level error above — both must
+  // reject distinguishably rather than collapsing to the same "null" a
+  // caller can't tell apart from a genuine zero balance.
+  it('propagates the error when simulateTransaction itself throws', async () => {
     simulateTransaction.mockRejectedValue(new Error('network error'));
 
     const { getTokenBalance } = await freshStellar(TESTNET_PASSPHRASE);
-    expect(await getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS)).toBeNull();
+    await expect(getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS)).rejects.toThrow('network error');
     expect(scValToNative).not.toHaveBeenCalled();
   });
 
