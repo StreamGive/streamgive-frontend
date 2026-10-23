@@ -108,7 +108,11 @@ export function ThemeToggle() {
   // On mount: read the stored preference and start listening for cross-tab
   // changes and OS theme changes.
   useEffect(() => {
+    // Read browser storage after hydration so the initial markup matches
+    // the server while restoring the user's saved preference on mount.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPreference(getStoredPreference());
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
 
     // Cross-tab sync: another tab wrote a new value (or cleared it) in

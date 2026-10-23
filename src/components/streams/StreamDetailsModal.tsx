@@ -3,19 +3,10 @@
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 
+import { CopyAddressButton } from '@/components/common/CopyAddressButton';
 import type { Stream } from '@/lib/api';
-import { formatTokenAmount } from '@/lib/format';
-import { DONATION_VAULT_CONTRACT_ID, explorerUrl, getNativeAssetAddress } from '@/lib/stellar';
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString();
-}
-
-// There's no symbol/name resolution for arbitrary tokens — only the native
-// asset's contract address is derivable client-side.
-function tokenLabel(tokenAddress: string): string {
-  return tokenAddress === getNativeAssetAddress() ? 'XLM' : tokenAddress;
-}
+import { formatDateTime, formatTokenAmount, tokenLabel } from '@/lib/format';
+import { DONATION_VAULT_CONTRACT_ID, explorerUrl } from '@/lib/stellar';
 
 export function StreamDetailsModal({ stream, onClose }: { stream: Stream; onClose: () => void }) {
   useEffect(() => {
@@ -125,7 +116,7 @@ export function StreamDetailsModal({ stream, onClose }: { stream: Stream; onClos
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="shrink-0 text-gray-500 dark:text-gray-400">Donor</dt>
-            <dd className="break-all text-right font-mono text-xs">
+            <dd className="flex items-center justify-end gap-2 break-all text-right font-mono text-xs">
               <a
                 href={explorerUrl('account', stream.donor.address)}
                 target="_blank"
@@ -134,11 +125,12 @@ export function StreamDetailsModal({ stream, onClose }: { stream: Stream; onClos
               >
                 {stream.donor.address}
               </a>
+              <CopyAddressButton address={stream.donor.address} />
             </dd>
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="shrink-0 text-gray-500 dark:text-gray-400">Token</dt>
-            <dd className="break-all text-right font-mono text-xs">
+            <dd className="flex items-center justify-end gap-2 break-all text-right font-mono text-xs">
               <a
                 href={explorerUrl('contract', stream.tokenAddress)}
                 target="_blank"
@@ -147,12 +139,13 @@ export function StreamDetailsModal({ stream, onClose }: { stream: Stream; onClos
               >
                 {tokenLabel(stream.tokenAddress)}
               </a>
+              <CopyAddressButton address={stream.tokenAddress} />
             </dd>
           </div>
           {DONATION_VAULT_CONTRACT_ID && (
             <div className="flex items-center justify-between gap-4">
               <dt className="text-gray-500 dark:text-gray-400">Contract</dt>
-              <dd className="font-medium">
+              <dd className="flex items-center justify-end gap-2 font-medium">
                 <a
                   href={explorerUrl('contract', DONATION_VAULT_CONTRACT_ID)}
                   target="_blank"
@@ -161,6 +154,7 @@ export function StreamDetailsModal({ stream, onClose }: { stream: Stream; onClos
                 >
                   View contract
                 </a>
+                <CopyAddressButton address={DONATION_VAULT_CONTRACT_ID} />
               </dd>
             </div>
           )}
@@ -178,15 +172,18 @@ export function StreamDetailsModal({ stream, onClose }: { stream: Stream; onClos
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="text-gray-500 dark:text-gray-400">Created</dt>
-            <dd className="font-medium">{formatDate(stream.createdAt)}</dd>
+            <dd className="font-medium">{formatDateTime(stream.createdAt)}</dd>
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="text-gray-500 dark:text-gray-400">Last updated</dt>
-            <dd className="font-medium">{formatDate(stream.updatedAt)}</dd>
+            <dd className="font-medium">{formatDateTime(stream.updatedAt)}</dd>
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="text-gray-500 dark:text-gray-400">On-chain ID</dt>
-            <dd className="font-medium">{stream.onChainId}</dd>
+            <dd className="flex items-center justify-end gap-2 font-medium">
+              {stream.onChainId}
+              <CopyAddressButton address={stream.onChainId} />
+            </dd>
           </div>
         </dl>
       </div>

@@ -2,7 +2,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
-import { configDefaults, defineConfig } from 'vitest/config';
+import { configDefaults, coverageConfigDefaults, defineConfig } from 'vitest/config';
 
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -16,6 +16,14 @@ export default defineConfig({
     // up and each one dies on "Playwright Test did not expect
     // test.describe() to be called here".
     exclude: [...configDefaults.exclude, 'e2e/**'],
+    coverage: {
+      provider: 'v8',
+      // Prints the per-file table plus an overall summary to the terminal;
+      // nothing written to disk unless `npm run test:coverage` is passed
+      // its own --reporter flags.
+      reporter: ['text'],
+      exclude: [...coverageConfigDefaults.exclude, 'e2e/**', 'test/**'],
+    },
   },
   resolve: {
     // Mirrors tsconfig.json's baseUrl/paths — Vitest doesn't read those

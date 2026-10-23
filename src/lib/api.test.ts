@@ -38,6 +38,33 @@ describe('api network errors', () => {
     await expect(getStreams({ donor: 'GABC' })).rejects.toThrow(TypeError);
     await expect(getStreams({ donor: 'GABC' })).rejects.toThrow('fetch failed');
   });
+
+  it(
+    'rejects once a stalled request hits the 10s timeout',
+    async () => {
+      // AbortSignal.timeout() schedules its own internal timer outside of
+      // the global setTimeout/setInterval that vi.useFakeTimers() patches,
+      // so it keeps running on the real clock even under fake timers —
+      // this has to let the real 10s elapse rather than fast-forward it.
+      //
+      // A realistic hung fetch: the promise it returns never settles on its
+      // own — it only rejects if/when the signal passed to it aborts, same
+      // as a real fetch() would once AbortSignal.timeout() fires.
+      vi.stubGlobal(
+        'fetch',
+        vi.fn((_url: string, options?: { signal?: AbortSignal }) => {
+          return new Promise((_resolve, reject) => {
+            options?.signal?.addEventListener('abort', () => {
+              reject(options.signal?.reason);
+            });
+          });
+        }),
+      );
+
+      await expect(getNgos()).rejects.toBeTruthy();
+    },
+    15_000,
+  );
 });
 
 // ---------------------------------------------------------------------------
@@ -105,7 +132,7 @@ describe('getNgo', () => {
   });
 
   it('URL-encodes the id in the request URL', async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(ngoProfile)));
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(jsonResponse(ngoProfile)));
     vi.stubGlobal('fetch', fetchMock);
 
     await getNgo('ngo/with spaces');
@@ -162,7 +189,7 @@ describe('lookupNgoByAddress', () => {
   });
 
   it('passes the address as a query parameter', async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(ngoProfile)));
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(jsonResponse(ngoProfile)));
     vi.stubGlobal('fetch', fetchMock);
 
     await lookupNgoByAddress('GABC123');
@@ -214,7 +241,7 @@ describe('getWithdrawals', () => {
   });
 
   it('URL-encodes the ngoId in the request URL', async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(withdrawals)));
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(jsonResponse(withdrawals)));
     vi.stubGlobal('fetch', fetchMock);
 
     await getWithdrawals('ngo/with spaces');
@@ -329,7 +356,7 @@ describe('submitNgoApplication', () => {
   });
 
   it('sends the input as JSON in the request body', async () => {
-    const fetchMock = vi.fn(() => Promise.resolve(jsonResponse(createdApplication, 201)));
+    const fetchMock = vi.fn<typeof fetch>(() => Promise.resolve(jsonResponse(createdApplication, 201)));
     vi.stubGlobal('fetch', fetchMock);
 
     await submitNgoApplication(input);

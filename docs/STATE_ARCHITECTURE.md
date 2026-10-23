@@ -16,7 +16,7 @@ actions via the `useWallet()` hook:
 | Field             | Type                    | Description                                                                                                                                           |
 | ----------------- | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `address`         | `string \| null`        | The connected wallet's public key, or `null` if nothing is connected.                                                                                 |
-| `connecting`      | `boolean`               | `true` only while a user-initiated `connect()` call is in flight — see the "connecting vs. restoring" note below.                                     |
+| `connecting`      | `boolean`               | `true` during the initial session restore and while a user-initiated `connect()` call is in flight.                                                    |
 | `connect()`       | `() => Promise<void>`   | Opens the wallet-selection auth modal; sets `address` on success.                                                                                     |
 | `disconnect()`    | `() => void`            | Clears local `address` state only — the wallet extension itself stays authorized (see the file's docblock for why there's no true remote disconnect). |
 | `signTransaction` | `WalletSignTransaction` | Signs a Stellar transaction envelope; used by the contract clients (see [CONTRACT_CALLS.md](./CONTRACT_CALLS.md)).                                    |
@@ -28,16 +28,22 @@ not per-page.
 
 **Connecting vs. restoring.** On mount, `WalletProvider` silently calls
 `StellarWalletsKit.getAddress()` to restore a session the user already
-authorized on a previous visit. That restore does **not** set `connecting`
-— it's a background check, not a user-initiated action — so
-`ConnectWalletButton` (and any other UI gating on `connecting` alone) won't
-show a loading state during it; `address` simply flips from `null` to the
-restored value once it resolves, or stays `null` if nothing was
-authorized. `connecting` only turns `true` for the explicit `connect()`
-call the "Connect Wallet" button triggers. Components that need to tell
-"still restoring" apart from "confirmed disconnected" have no separate
-signal for that today — see the docblock above `WalletProvider` for the
-full lifecycle.
+authorized on a previous visit. `connecting` starts as `true` and remains
+true throughout this restore, including the network check after a
+successful `getAddress()`. The restore's `finally` resets it to `false`
+whether a session was restored or no authorized wallet was found. On
+success, `address` is set to the restored public key; otherwise it stays
+`null`. An explicit `connect()` call also sets `connecting` to `true` and
+resets it to `false` in its own `finally`.
+
+Pages should show a loading state while `address === null && connecting`,
+then show a connect prompt only when `address === null && !connecting`.
+This prevents a disconnected-state flash while an existing session is
+restoring. `ConnectWalletPrompt` handles this loading state internally,
+so pages can render it whenever `address` is missing. `ConnectWalletButton`
+also shows a loading state while `connecting` is true. The flag lets UI
+distinguish a pending connection from a confirmed disconnected state; it
+does not distinguish automatic restoration from an explicit connection.
 
 **Usage:**
 

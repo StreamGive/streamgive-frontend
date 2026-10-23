@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { useToast } from '@/components/toast/ToastProvider';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { getStreams, type Stream } from '@/lib/api';
 import { describeContractError } from '@/lib/contractTypes';
 import { useDonationVaultClient } from '@/lib/donationVaultClient';
-import { describeAmountError, formatEstimatedFee, parseAmount, TOKEN_DECIMALS } from '@/lib/format';
+import { describeAmountError, formatEstimatedFee, formatRate, parseAmount } from '@/lib/format';
+import { DURATIONS } from '@/lib/durations';
 import { txToastAction } from '@/lib/stellar';
 
 /**
@@ -23,13 +24,6 @@ export function computeModifyRate(balance: string, durationSeconds: number): big
   const rate = BigInt(balance) / BigInt(durationSeconds);
   return rate > 0n ? rate : null;
 }
-
-const DURATIONS = [
-  { label: '1 week', seconds: 7 * 24 * 60 * 60 },
-  { label: '1 month', seconds: 30 * 24 * 60 * 60 },
-  { label: '3 months', seconds: 90 * 24 * 60 * 60 },
-  { label: '1 year', seconds: 365 * 24 * 60 * 60 },
-];
 
 // The list this sits in comes from the backend's indexer, which polls on
 // an interval — a confirmed on-chain action can lag a few seconds before
@@ -66,8 +60,55 @@ export function StreamControls({
   const [mode, setMode] = useState<Mode>('idle');
   const [pending, setPending] = useState<PendingAction>(null);
   const [durationSeconds, setDurationSeconds] = useState(DURATIONS[1].seconds);
+  const [modifyStartedAt, setModifyStartedAt] = useState(0);
   const [topUpAmount, setTopUpAmount] = useState('');
   const [estimatedFee, setEstimatedFee] = useState<string | null>(null);
+
+  // Each mode replaces the whole subtree below, so switching modes unmounts
+  // whatever had focus — without this, focus falls back to <body>. Each
+  // ref points at the control that mode-switch should land focus on: the
+  // new mode's first control when entering one, or the idle trigger that
+  // opened it when backing out (idleContainerRef is the fallback for when
+  // that trigger is mid-action and disabled, e.g. right after submitting).
+  const idleContainerRef = useRef<HTMLDivElement>(null);
+  const topUpButtonRef = useRef<HTMLButtonElement>(null);
+  const modifyButtonRef = useRef<HTMLButtonElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const topUpAmountInputRef = useRef<HTMLInputElement>(null);
+  const modifyDurationSelectRef = useRef<HTMLSelectElement>(null);
+  const confirmCancelButtonRef = useRef<HTMLButtonElement>(null);
+  const previousModeRef = useRef<Mode>(mode);
+
+  useEffect(() => {
+    const previousMode = previousModeRef.current;
+    previousModeRef.current = mode;
+    if (mode === previousMode) return;
+
+    if (mode === 'toppingUp') {
+      topUpAmountInputRef.current?.focus();
+    } else if (mode === 'modifying') {
+      modifyDurationSelectRef.current?.focus();
+    } else if (mode === 'confirmingCancel') {
+      confirmCancelButtonRef.current?.focus();
+    } else {
+      const trigger =
+        previousMode === 'toppingUp'
+          ? topUpButtonRef.current
+          : previousMode === 'modifying'
+            ? modifyButtonRef.current
+            : previousMode === 'confirmingCancel'
+              ? cancelButtonRef.current
+              : null;
+      // A trigger that just submitted its action is disabled (pending !==
+      // null) by the time this runs — a disabled button can't take focus,
+      // so the live region announcing that progress is the next best thing.
+      if (trigger && !trigger.disabled) {
+        trigger.focus();
+      } else {
+        idleContainerRef.current?.focus();
+      }
+    }
+  }, [mode]);
 
   const topUpAmountRaw = parseAmount(topUpAmount);
   const topUpAmountError = describeAmountError(topUpAmount);
@@ -175,6 +216,7 @@ export function StreamControls({
       <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-2">
           <input
+            ref={topUpAmountInputRef}
             type="number"
             min="0"
             step="any"
@@ -218,6 +260,7 @@ export function StreamControls({
           Cancel this stream? This can&apos;t be undone.
         </span>
         <button
+          ref={confirmCancelButtonRef}
           type="button"
           onClick={() => void handleCancel()}
           className="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:bg-red-500 dark:hover:bg-red-600 dark:focus-visible:ring-teal-400"
@@ -237,14 +280,18 @@ export function StreamControls({
 
   if (mode === 'modifying') {
     const previewRate = computeModifyRate(stream.balance, durationSeconds);
-    const previewEndDate = new Date(Date.now() + durationSeconds * 1000);
+    const previewEndDate = new Date(modifyStartedAt + durationSeconds * 1000);
 
     return (
       <div className="flex flex-col items-end gap-1">
         <div className="flex items-center gap-2">
           <select
+            ref={modifyDurationSelectRef}
             value={durationSeconds}
-            onChange={(event) => setDurationSeconds(Number(event.target.value))}
+            onChange={(event) => {
+              setDurationSeconds(Number(event.target.value));
+              setModifyStartedAt(Date.now());
+            }}
             aria-label="New duration to stream the remaining balance over"
             className="rounded-md border border-gray-300 px-2 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:border-gray-700 dark:bg-gray-900 dark:focus-visible:ring-teal-400"
           >
@@ -272,7 +319,7 @@ export function StreamControls({
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {previewRate !== null
-            ? `${(Number(previewRate) / 10 ** TOKEN_DECIMALS).toFixed(7)} per second, ending ${previewEndDate.toLocaleDateString()}.`
+            ? `${formatRate(previewRate)} per second, ending ${previewEndDate.toLocaleDateString()}.`
             : 'Remaining balance is too small to stream over this duration — try a shorter one.'}
         </p>
       </div>
@@ -280,9 +327,15 @@ export function StreamControls({
   }
 
   return (
-    <div className="flex flex-wrap items-center justify-end gap-2">
+    <div
+      ref={idleContainerRef}
+      role="status"
+      aria-live="polite"
+      tabIndex={-1}
+      className="flex flex-wrap items-center justify-end gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400"
+    >
       {!ready && (
-        <span role="status" className="text-xs text-gray-600 dark:text-gray-400">
+        <span className="text-xs text-gray-600 dark:text-gray-400">
           Preparing contract…
         </span>
       )}
@@ -290,6 +343,7 @@ export function StreamControls({
         <span className="text-xs text-gray-500 dark:text-gray-400">Fee {estimatedFee}</span>
       )}
       <button
+        ref={topUpButtonRef}
         type="button"
         onClick={() => setMode('toppingUp')}
         disabled={pending !== null || !ready}
@@ -298,14 +352,19 @@ export function StreamControls({
         {pending === 'topUp' ? 'Topping up…' : 'Top up'}
       </button>
       <button
+        ref={modifyButtonRef}
         type="button"
-        onClick={() => setMode('modifying')}
+        onClick={() => {
+          setModifyStartedAt(Date.now());
+          setMode('modifying');
+        }}
         disabled={pending !== null || !ready}
         className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-50 dark:focus-visible:ring-teal-400"
       >
         {pending === 'modifyRate' ? 'Updating…' : 'Modify rate'}
       </button>
       <button
+        ref={cancelButtonRef}
         type="button"
         onClick={() => setMode('confirmingCancel')}
         disabled={pending !== null || !ready}

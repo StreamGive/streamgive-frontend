@@ -17,6 +17,12 @@ import { useEffect, useRef, useState } from 'react';
  * Finishes (and hides) once `pathname`/`searchParams` reflect the new route,
  * which is the App Router's own signal that the transition completed.
  */
+// A transition that's still running after this long is treated as stuck —
+// redirected somewhere this listener couldn't see, errored out without a
+// URL change, or otherwise never going to resolve — rather than left to
+// show forever.
+const MAX_DURATION_MS = 8000;
+
 export function RouteProgressBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -25,14 +31,27 @@ export function RouteProgressBar() {
   // change back to the *same* route (e.g. a query-string-only update the
   // click listener never saw) doesn't leave the bar stuck showing forever.
   const startedFrom = useRef<string | null>(null);
+  const timeoutId = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function clearPendingTimeout() {
+    if (timeoutId.current !== null) {
+      clearTimeout(timeoutId.current);
+      timeoutId.current = null;
+    }
+  }
 
   useEffect(() => {
     const current = `${pathname}?${searchParams.toString()}`;
     if (startedFrom.current !== null && startedFrom.current !== current) {
+      clearPendingTimeout();
       setActive(false);
       startedFrom.current = null;
     }
   }, [pathname, searchParams]);
+
+  // Belt-and-suspenders cleanup on unmount — nothing else references this
+  // timeout once the component is gone.
+  useEffect(() => clearPendingTimeout, []);
 
   useEffect(() => {
     function handleClick(event: MouseEvent) {
@@ -60,6 +79,13 @@ export function RouteProgressBar() {
 
       startedFrom.current = current;
       setActive(true);
+
+      clearPendingTimeout();
+      timeoutId.current = setTimeout(() => {
+        setActive(false);
+        startedFrom.current = null;
+        timeoutId.current = null;
+      }, MAX_DURATION_MS);
     }
 
     document.addEventListener('click', handleClick);

@@ -114,6 +114,34 @@ describe('NgoExplorer', () => {
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(15);
   });
 
+  it('restores the sort from the URL on mount', () => {
+    mockSearchParams = new URLSearchParams('sort=most-active-streams');
+    const ngos = [
+      makeNgo({ id: 'a', name: 'Alpha', stats: { totalCommitted: '0', totalWithdrawn: '0', activeStreamCount: 1, donorCount: 0 } }),
+      makeNgo({ id: 'b', name: 'Beta', stats: { totalCommitted: '0', totalWithdrawn: '0', activeStreamCount: 5, donorCount: 0 } }),
+      makeNgo({ id: 'c', name: 'Gamma', stats: { totalCommitted: '0', totalWithdrawn: '0', activeStreamCount: 3, donorCount: 0 } }),
+    ];
+    render(<NgoExplorer ngos={ngos} />);
+
+    expect(screen.getByRole('combobox')).toHaveValue('most-active-streams');
+
+    const headings = screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent);
+    expect(headings).toEqual(['Beta', 'Gamma', 'Alpha']);
+  });
+
+  it('writes the sort to the URL when changed (and clears page)', () => {
+    mockSearchParams = new URLSearchParams('q=Water&page=2');
+    const ngos = buildNgos();
+    render(<NgoExplorer ngos={ngos} />);
+
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'most-committed' } });
+
+    expect(mockReplace).toHaveBeenLastCalledWith(
+      '/ngos?q=Water&sort=most-committed',
+      { scroll: false },
+    );
+  });
+
   it('shows an empty state when the search matches nothing', () => {
     const ngos = buildNgos();
     render(<NgoExplorer ngos={ngos} />);
@@ -143,5 +171,42 @@ describe('NgoExplorer', () => {
       expect(card.getAllByText('Committed')).toHaveLength(1);
       expect(card.getAllByRole('link')).toHaveLength(1);
     }
+  });
+
+  it('sorts "Most committed" by comparing raw totals as BigInt, not parseFloat', () => {
+    // 2^53 and 2^53 + 1 round to the identical double under parseFloat —
+    // a parseFloat-based sort sees a tie and (being a stable sort) leaves
+    // them in input order, same as if it had sorted them wrong. Only a
+    // BigInt comparison tells them apart.
+    const smaller = makeNgo({
+      id: 'smaller',
+      name: 'Smaller Totals Org',
+      stats: {
+        totalCommitted: '9007199254740992', // 2^53
+        totalWithdrawn: '0',
+        activeStreamCount: 0,
+        donorCount: 0,
+      },
+    });
+    const larger = makeNgo({
+      id: 'larger',
+      name: 'Larger Totals Org',
+      stats: {
+        totalCommitted: '9007199254740993', // 2^53 + 1
+        totalWithdrawn: '0',
+        activeStreamCount: 0,
+        donorCount: 0,
+      },
+    });
+    // Input order puts the smaller total first, so a no-op "sort" would
+    // leave it first too — the opposite of what "Most committed" promises.
+    render(<NgoExplorer ngos={[smaller, larger]} />);
+
+    fireEvent.change(screen.getByLabelText('Sort NGOs'), {
+      target: { value: 'most-committed' },
+    });
+
+    const names = screen.getAllByRole('heading', { level: 2 }).map((el) => el.textContent);
+    expect(names).toEqual(['Larger Totals Org', 'Smaller Totals Org']);
   });
 });

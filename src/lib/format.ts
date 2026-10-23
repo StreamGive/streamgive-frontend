@@ -54,6 +54,18 @@ export function formatAmount(raw: string, decimals: number = TOKEN_DECIMALS): st
   return isNegative ? `-${formatted}` : formatted;
 }
 
+/** Formats a raw per-second rate with exactly the token's decimal places,
+ * preserving i128 precision without converting the rate to Number. */
+export function formatRate(raw: bigint, decimals: number = TOKEN_DECIMALS): string {
+  const isNegative = raw < 0n;
+  const abs = isNegative ? -raw : raw;
+  const divisor = 10n ** BigInt(decimals);
+  const whole = abs / divisor;
+  const fraction = (abs % divisor).toString().padStart(decimals, '0');
+  const formatted = decimals === 0 ? whole.toString() : `${whole}.${fraction}`;
+  return isNegative ? `-${formatted}` : formatted;
+}
+
 /** Short display label for a token contract: "XLM" for the native asset,
  * "USDC" for the configured USDC contract, and a shortened contract address
  * for anything else (there is no symbol lookup for arbitrary tokens). */
@@ -65,6 +77,15 @@ export function tokenSymbol(tokenAddress: string): string {
     return 'USDC';
   }
   return truncateAddress(tokenAddress);
+}
+
+/** Like `tokenSymbol`, but for display contexts that want the token's full
+ * identity rather than a shortened one: "XLM" for the native asset, or the
+ * token's full (untruncated) contract address for anything else — there's
+ * no symbol/name resolution for arbitrary tokens, only the native asset's
+ * address is derivable client-side. */
+export function tokenLabel(tokenAddress: string): string {
+  return tokenAddress === getNativeAssetAddress() ? 'XLM' : tokenAddress;
 }
 
 /** `formatAmount` plus the token's symbol, so "100" can't be mistaken for
@@ -230,4 +251,16 @@ export function truncateAddress(address: string): string {
     return address;
   }
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
+}
+
+/** Formats an ISO timestamp as a bare date (no time), in the viewer's own
+ * locale and timezone. */
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString();
+}
+
+/** Formats an ISO timestamp as a date and time, in the viewer's own locale
+ * and timezone. */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString();
 }

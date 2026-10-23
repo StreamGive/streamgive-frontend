@@ -71,9 +71,10 @@ describe('ToastProvider', () => {
     fireEvent.click(screen.getByText('Show Success'));
     fireEvent.click(screen.getByText('Show Info'));
 
-    expect(screen.getByText('Error Toast')).toHaveAttribute('role', 'alert');
-    expect(screen.getByText('Success Toast')).toHaveAttribute('role', 'status');
-    expect(screen.getByText('Info Toast')).toHaveAttribute('role', 'status');
+    expect(screen.getByRole('alert')).toHaveTextContent('Error Toast');
+    expect(screen.getAllByRole('status')).toHaveLength(2);
+    expect(screen.getByText('Success Toast').closest('[role="status"]')).toBeInTheDocument();
+    expect(screen.getByText('Info Toast').closest('[role="status"]')).toBeInTheDocument();
   });
 
   it('throws an error when useToast is used outside of ToastProvider', () => {

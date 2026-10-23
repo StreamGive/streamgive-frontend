@@ -1,8 +1,22 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Header } from './Header';
+
+const mockUsePathname = vi.fn(() => '/ngos');
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => mockUsePathname(),
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
+// Just enough for LocaleSwitcher (rendered inside Header) to not crash for
+// lack of a real NextIntlClientProvider context.
+vi.mock('next-intl', () => ({
+  useLocale: () => 'en',
+  useTranslations: () => (key: string) => key,
+}));
 
 vi.mock('@/components/wallet/WalletProvider', () => ({
   useWallet: () => ({
@@ -16,17 +30,30 @@ vi.mock('@/components/wallet/WalletProvider', () => ({
   }),
 }));
 
+// With no wallet connected (see the mock above), NGO Admin and Platform
+// Admin never render — these are the four links everyone gets.
 const NAV_LINKS = [
   { href: '/ngos', label: 'Explore NGOs' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/impact', label: 'Impact' },
   { href: '/apply', label: 'Apply as NGO' },
-  { href: '/ngo-admin', label: 'NGO Admin' },
-  { href: '/platform-admin', label: 'Platform Admin' },
 ];
 
+beforeEach(() => {
+  mockUsePathname.mockReturnValue('/ngos');
+});
+
+/** aria-current is only set on the mobile nav's links (see Header.tsx) — the
+ * desktop nav doesn't currently highlight the active link at all. */
+async function openMobileMenu() {
+  const user = userEvent.setup();
+  render(<Header />);
+  await user.click(screen.getByRole('button', { name: 'Toggle menu' }));
+  return document.getElementById('mobile-nav') as HTMLElement;
+}
+
 describe('Header', () => {
-  it('renders all six navigation links with the correct hrefs', () => {
+  it('renders all four navigation links with the correct hrefs', () => {
     render(<Header />);
 
     for (const { href, label } of NAV_LINKS) {
@@ -92,5 +119,81 @@ describe('Header', () => {
     await user.click(link!);
 
     expect(document.getElementById('mobile-nav')).not.toBeInTheDocument();
+  });
+
+  describe('closing the mobile menu', () => {
+    it('closes on Escape and returns focus to the toggle', async () => {
+      const user = userEvent.setup();
+      render(<Header />);
+      const toggle = screen.getByRole('button', { name: 'Toggle menu' });
+
+      await user.click(toggle);
+      expect(document.getElementById('mobile-nav')).toBeInTheDocument();
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      expect(document.getElementById('mobile-nav')).not.toBeInTheDocument();
+      expect(toggle).toHaveFocus();
+    });
+
+    it('closes on a click outside the menu and returns focus to the toggle', async () => {
+      const user = userEvent.setup();
+      render(
+        <>
+          <Header />
+          <button type="button">Outside</button>
+        </>,
+      );
+      const toggle = screen.getByRole('button', { name: 'Toggle menu' });
+
+      await user.click(toggle);
+      expect(document.getElementById('mobile-nav')).toBeInTheDocument();
+
+      fireEvent.mouseDown(screen.getByRole('button', { name: 'Outside' }));
+
+      expect(document.getElementById('mobile-nav')).not.toBeInTheDocument();
+      expect(toggle).toHaveFocus();
+    });
+
+    it('stays open when the click is inside the menu itself', async () => {
+      const user = userEvent.setup();
+      render(<Header />);
+
+      await user.click(screen.getByRole('button', { name: 'Toggle menu' }));
+      fireEvent.mouseDown(document.getElementById('mobile-nav')!);
+
+      expect(document.getElementById('mobile-nav')).toBeInTheDocument();
+    });
+  });
+
+  describe('active link highlight', () => {
+    it.each([
+      { pathname: '/ngos', active: 'Explore NGOs' },
+      { pathname: '/dashboard', active: 'Dashboard' },
+      { pathname: '/impact', active: 'Impact' },
+      { pathname: '/apply', active: 'Apply as NGO' },
+      // A nested route under a nav link's href counts as active too —
+      // isActiveLink() matches on startsWith(`${href}/`), not just equality.
+      { pathname: '/ngos/some-ngo-id', active: 'Explore NGOs' },
+      { pathname: '/dashboard/anything', active: 'Dashboard' },
+      // No nav link matches the home page or an unrelated route.
+      { pathname: '/', active: null },
+      { pathname: '/some-other-page', active: null },
+    ])('marks $active as current for $pathname', async ({ pathname, active }) => {
+      mockUsePathname.mockReturnValue(pathname);
+      const mobileNav = await openMobileMenu();
+
+      for (const { label } of NAV_LINKS) {
+        const link = Array.from(mobileNav.querySelectorAll('a')).find(
+          (a) => a.textContent === label,
+        ) as HTMLElement;
+
+        if (label === active) {
+          expect(link).toHaveAttribute('aria-current', 'page');
+        } else {
+          expect(link).not.toHaveAttribute('aria-current');
+        }
+      }
+    });
   });
 });

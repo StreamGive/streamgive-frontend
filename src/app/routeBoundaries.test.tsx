@@ -3,14 +3,14 @@ import { renderToString } from 'react-dom/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import GlobalError from './global-error';
-import DashboardError from './dashboard/error';
-import DashboardLoading from './dashboard/loading';
-import NgoAdminError from './ngo-admin/error';
-import NgoAdminLoading from './ngo-admin/loading';
-import NgoProfileError from './ngos/[id]/error';
-import NgoProfileLoading from './ngos/[id]/loading';
-import PlatformAdminError from './platform-admin/error';
-import PlatformAdminLoading from './platform-admin/loading';
+import DashboardError from './(main)/dashboard/error';
+import DashboardLoading from './(main)/dashboard/loading';
+import NgoAdminError from './(main)/ngo-admin/error';
+import NgoAdminLoading from './(main)/ngo-admin/loading';
+import NgoProfileError from './(main)/ngos/[id]/error';
+import NgoProfileLoading from './(main)/ngos/[id]/loading';
+import PlatformAdminError from './(main)/platform-admin/error';
+import PlatformAdminLoading from './(main)/platform-admin/loading';
 
 vi.mock('@/components/wallet/WalletProvider', () => ({
   useWallet: () => ({

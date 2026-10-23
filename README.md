@@ -7,6 +7,11 @@ platform for verified NGOs on Stellar.
 
 - Next.js (App Router), React, TypeScript
 - Tailwind CSS
+- Stellar Wallets Kit (`@creit.tech/stellar-wallets-kit`) for wallet connection and signing
+- Stellar SDK (`@stellar/stellar-sdk`) for Soroban contract calls
+- Vitest and Testing Library for unit and component tests
+- Playwright for end-to-end tests
+- next-intl for i18n (scaffolding so far — see [docs/I18N.md](./docs/I18N.md))
 
 See [docs/COMPONENTS.md](./docs/COMPONENTS.md) for a component tree of
 `src/components/` with a one-line description of each piece,
@@ -18,6 +23,11 @@ every Soroban contract method the frontend calls to the UI flow and
 arguments behind it, and
 [docs/THEMING.md](./docs/THEMING.md) for the Tailwind v4 theme tokens and
 the dark-mode strategy.
+
+See [docs/DATA_FETCHING.md](./docs/DATA_FETCHING.md) for server/client data
+loading, cache revalidation, polling intervals, and the known 1+N impact
+fetch pattern, and [docs/I18N.md](./docs/I18N.md) for how translations are
+wired up and how to add a language.
 
 ## Local development
 
@@ -105,16 +115,17 @@ port: `npm run dev -- -p 3002`.
   point at a running `streamgive-backend` instance — this app has no
   API of its own.
 - `NEXT_PUBLIC_*` vars are read at build time in production (see
-  Deployment below), so changing `.env` requires a dev-server restart
+  [Deployment](#deployment)), so changing `.env` requires a dev-server restart
   (or a rebuild, in Docker) to take effect.
 - A CORS error in the console usually means the backend isn't configured
   to allow this app's origin — that's a backend-side fix, not frontend.
 
 **Contract calls failing (donations, withdrawals, NGO registry)**
 - `NEXT_PUBLIC_DONATION_VAULT_CONTRACT_ID` and
-  `NEXT_PUBLIC_NGO_REGISTRY_CONTRACT_ID` must be filled in from
-  `streamgive-contracts/deployments.json` for the network you're using —
-  they're blank in `.env.example`.
+  `NEXT_PUBLIC_NGO_REGISTRY_CONTRACT_ID` are pre-filled in `.env.example`
+  with testnet deployment IDs. If you change networks or deploy your own
+  contracts, update them in `.env` using the matching entries in
+  `streamgive-contracts/deployments.json`.
 - `NEXT_PUBLIC_SOROBAN_RPC_URL` must point at an RPC endpoint for that
   same network; a mismatched network/RPC/contract-ID combination
   typically fails with an XDR or "contract not found" style error rather
@@ -147,7 +158,7 @@ longer interval / backoff).
 
 This table lists every route under `src/app`, who it is meant for, and its technical requirements.
 
-| Route | Audience | Wallet / Admin Required? | Component Type |
+| Route | Audience | Wallet / Admin Required? | Component / Route Type |
 |---|---|---|---|
 | `/` | Public | No | Server Component |
 | `/apply` | NGO Applicant | Yes (Wallet) | Client Component |
@@ -158,7 +169,10 @@ This table lists every route under `src/app`, who it is meant for, and its techn
 | `/ngos` | Public | No | Server Component |
 | `/ngos/[id]` | Public | No | Server Component |
 | `/ngos/[id]/donate` | Donor | No (Form requires Wallet) | Server Component |
+| `/ngos/[id]/donate/success` | Donor | No | Server Component |
 | `/platform-admin` | Platform Admin | Yes (Wallet + `ADMIN_ADDRESS`) | Client Component |
+| `/robots.txt` | Search crawlers | No | Metadata Route (`src/app/robots.ts`) |
+| `/sitemap.xml` | Search crawlers | No | Metadata Route (`src/app/sitemap.ts`) |
 
 See the [Embed Widget Guide](./docs/EMBED.md) for details on embedding the `/embed/[ngoId]` widget.
 

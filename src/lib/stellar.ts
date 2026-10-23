@@ -99,49 +99,55 @@ const RPC_TIMEOUT_MS = 10_000;
  * which only accepts a classic `Asset` and so can't look up an arbitrary
  * custom contract address.
  *
+ * Unlike most lookups in this file, failures here are not swallowed to
+ * `null` — a wrong network, an RPC outage and an address that just isn't a
+ * token contract are different problems with different fixes, and the
+ * caller (CreateStreamForm) needs to tell "couldn't check" apart from "this
+ * address has no balance()" to show a retry instead of silently showing
+ * nothing (issue: "getTokenBalance reports every failure as 'no balance'").
+ *
  * @returns The raw i128 balance as a string (same units as everywhere else
- * in this app — see TOKEN_DECIMALS/formatAmount), or `null` if the
- * simulation fails (e.g. the address isn't a valid token contract).
+ * in this app — see TOKEN_DECIMALS/formatAmount).
+ * @throws {Error} if the simulation fails or errors for any reason (wrong
+ * network, RPC outage, the address isn't a valid token contract, etc.).
  */
 export async function getTokenBalance(
   tokenAddress: string,
   walletAddress: string,
-): Promise<string | null> {
-  try {
-    const server = new rpc.Server(SOROBAN_RPC_URL);
-    const account = new Account(SIMULATION_SOURCE_ACCOUNT, '0');
-    const contract = new Contract(tokenAddress);
+): Promise<string> {
+  const server = new rpc.Server(SOROBAN_RPC_URL);
+  const account = new Account(SIMULATION_SOURCE_ACCOUNT, '0');
+  const contract = new Contract(tokenAddress);
 
-    const tx = new TransactionBuilder(account, {
-      fee: SIMULATION_FEE,
-      networkPassphrase: NETWORK_PASSPHRASE,
-    })
-      .addOperation(contract.call('balance', nativeToScVal(walletAddress, { type: 'address' })))
-      .setTimeout(30)
-      .build();
+  const tx = new TransactionBuilder(account, {
+    fee: SIMULATION_FEE,
+    networkPassphrase: NETWORK_PASSPHRASE,
+  })
+    .addOperation(contract.call('balance', nativeToScVal(walletAddress, { type: 'address' })))
+    .setTimeout(30)
+    .build();
 
-    // Race the RPC call against a timeout — the SDK doesn't accept an
-    // AbortSignal directly, so we wire one up ourselves. The promise still
-    // settles in the background, but we stop waiting for it.
-    const timeoutSignal = AbortSignal.timeout(RPC_TIMEOUT_MS);
-    const simulated = await Promise.race([
-      server.simulateTransaction(tx),
-      new Promise<never>((_, reject) => {
-        timeoutSignal.addEventListener('abort', () =>
-          reject(new DOMException('RPC balance check timed out', 'TimeoutError')),
-        );
-      }),
-    ]);
-
-    if (rpc.Api.isSimulationError(simulated) || !simulated.result) {
-      return null;
-    }
-
-    const balance = scValToNative(simulated.result.retval) as bigint;
-    return balance.toString();
-  } catch {
-    return null;
+  // Race the RPC call against a timeout — the SDK doesn't accept an
+  // AbortSignal directly, so we wire one up ourselves. The promise still
+  // settles in the background, but we stop waiting for it.
+  const timeoutSignal = AbortSignal.timeout(RPC_TIMEOUT_MS);
+  const simulated = await Promise.race([
+    server.simulateTransaction(tx),
+    new Promise<never>((_, reject) => {
+      timeoutSignal.addEventListener('abort', () =>
+        reject(new DOMException('RPC balance check timed out', 'TimeoutError')),
+      );
+    }),
+  ]);
+  if (rpc.Api.isSimulationError(simulated)) {
+    throw new Error(`Failed to simulate balance() for ${tokenAddress}: ${simulated.error}`);
   }
+  if (!simulated.result) {
+    throw new Error(`balance() simulation for ${tokenAddress} returned no result`);
+  }
+
+  const balance = scValToNative(simulated.result.retval) as bigint;
+  return balance.toString();
 }
 
 /**

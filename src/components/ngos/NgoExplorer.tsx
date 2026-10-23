@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 import type { NgoProfile } from '@/lib/api';
 import { formatAmount } from '@/lib/format';
@@ -19,7 +19,13 @@ function sortNgos(ngos: NgoProfile[], sort: SortOption): NgoProfile[] {
     return copy.sort((a, b) => b.stats.activeStreamCount - a.stats.activeStreamCount);
   }
   if (sort === 'most-committed') {
-    return copy.sort((a, b) => parseFloat(b.stats.totalCommitted) - parseFloat(a.stats.totalCommitted));
+    // totalCommitted is a raw i128 string — compared as BigInt, not via
+    // parseFloat, which loses precision above 2^53 and can misorder large
+    // totals (same reasoning as NgoAdminStreamList's balance sort).
+    return copy.sort((a, b) => {
+      const diff = BigInt(b.stats.totalCommitted) - BigInt(a.stats.totalCommitted);
+      return diff > 0n ? 1 : diff < 0n ? -1 : 0;
+    });
   }
   // newest: sort by createdAt descending
   return copy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -32,6 +38,14 @@ function parsePage(value: string | null): number {
   return Number.isInteger(page) && page > 0 ? page : 1;
 }
 
+// Only a non-default sort is carried in the URL; 'newest' is the implicit
+// default and is omitted to keep shared links tidy.
+const SORT_OPTIONS: readonly SortOption[] = ['newest', 'most-active-streams', 'most-committed'];
+
+function parseSort(value: string | null): SortOption {
+  return SORT_OPTIONS.includes(value as SortOption) ? (value as SortOption) : 'newest';
+}
+
 export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -39,21 +53,25 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
 
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
   const [page, setPage] = useState(() => parsePage(searchParams.get('page')));
-  const [sortBy, setSortBy] = useState<SortOption>('newest');
+  const [sortBy, setSortBy] = useState<SortOption>(() => parseSort(searchParams.get('sort')));
 
-  // Keeps state in sync with the URL for cases that don't go through the
-  // handlers below — landing on a shared link, or the back/forward button.
-  useEffect(() => {
+  // Sync incoming URL changes before rendering, while keeping immediate
+  // local updates from the handlers below until navigation completes.
+  const queryString = searchParams.toString();
+  const [previousQueryString, setPreviousQueryString] = useState(queryString);
+  if (queryString !== previousQueryString) {
+    setPreviousQueryString(queryString);
     setSearchQuery(searchParams.get('q') ?? '');
     setPage(parsePage(searchParams.get('page')));
-  }, [searchParams]);
+    setSortBy(parseSort(searchParams.get('sort')));
+  }
 
   const visibleCount = page * PAGE_SIZE;
 
-  // Only q and page are synced (see acceptance criteria) — sort stays
-  // local. Replaced rather than pushed so search-as-you-type doesn't fill
-  // the back-button history with one entry per keystroke.
-  function syncParams(next: { q?: string; page?: number }): void {
+  // q, page and sort are synced to the URL so links/back-forward preserve
+  // the full explorer state. router.replace (not push) so search-as-you-type
+  // doesn't fill history with one entry per keystroke.
+  function syncParams(next: { q?: string; page?: number; sort?: SortOption }): void {
     const params = new URLSearchParams(searchParams.toString());
 
     if (next.q !== undefined) {
@@ -68,6 +86,13 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
         params.set('page', String(next.page));
       } else {
         params.delete('page');
+      }
+    }
+    if (next.sort !== undefined) {
+      if (next.sort !== 'newest') {
+        params.set('sort', next.sort);
+      } else {
+        params.delete('sort');
       }
     }
 
@@ -95,7 +120,7 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
   function handleSortChange(value: SortOption): void {
     setSortBy(value);
     setPage(1);
-    syncParams({ page: 1 });
+    syncParams({ sort: value, page: 1 });
   }
 
   function handleLoadMore(): void {

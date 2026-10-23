@@ -116,12 +116,16 @@ export function useDonationVaultClient(): {
 
   useEffect(() => {
     if (!address) {
+      // A disconnected wallet must not retain a usable signing client.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClient(null);
       setInitError(null);
       return;
     }
 
     let cancelled = false;
+    // Invalidate the previous signer before fetching the new wallet's client.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setClient(null);
     setInitError(null);
 
@@ -134,10 +138,11 @@ export function useDonationVaultClient(): {
       })
       .catch((err) => {
         if (!cancelled) {
-          const message =
-            err instanceof Error
-              ? `Couldn't reach the donation contract: ${err.message}`
-              : `Couldn't reach the donation contract.`;
+          // The error can be a developer-facing message (e.g. a missing
+          // NEXT_PUBLIC_*_CONTRACT_ID env var) that a donor can't act on —
+          // logged for whoever's debugging the deployment, not shown.
+          console.error('Failed to initialize the donation vault client:', err);
+          const message = "Couldn't reach the donation contract. Please try again shortly.";
           setInitError(message);
           if (!hasToastedInitError) {
             hasToastedInitError = true;

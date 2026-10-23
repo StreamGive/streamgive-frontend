@@ -53,23 +53,61 @@ All token amounts sent to the contracts are raw integers scaled by
 | ------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `register`    | [`src/app/apply/page.tsx`](../src/app/apply/page.tsx) `handleSubmit`                    | Applicant connects a wallet on `/apply`, fills the NGO application form, and submits.   | `owner` (connected wallet address — **must** be the caller's own address, since `register` requires the owner's own signature; this is what proves the applicant controls the address rather than just typing one in), `name` (trimmed org name). Called **before** the off-chain `submitNgoApplication` — an application is only submitted once the on-chain registration either succeeds or was already done in an earlier attempt (`isAlreadyRegistered()` checks for the registry's `ALREADY_REGISTERED` error code and treats it as a no-op, not a failure). |
 | `approve_ngo` | [`src/app/platform-admin/page.tsx`](../src/app/platform-admin/page.tsx) `handleApprove` | Platform admin reviews a pending application on `/platform-admin` and clicks "Approve". | `ngo_owner` (the applicant's address from the application record). Called **before** the off-chain `reviewNgoApplication` call — on-chain approval is the source of truth for `Ngo.verified`; if the transaction fails or is rejected, the off-chain review status deliberately stays "pending" rather than being marked approved while the NGO is still unverified on-chain. Fails with `NotRegistered` (see `NGO_REGISTRY_ERRORS` in `contractTypes.ts`) if the applicant's `register()` call never landed.                                                     |
+| `revoke_ngo` | [`src/app/platform-admin/page.tsx`](../src/app/platform-admin/page.tsx) `handleRevoke` | Platform admin clicks "Revoke" on a verified NGO, then "Confirm Revoke". | `ngo_owner` (`ngo.ownerAddress`, the verified NGO owner's address). Signs and submits the transaction, then refreshes the list. |
+
+Revocation does not call
+`reviewNgoApplication`; verification status is updated through the on-chain
+event and indexer.
+
+## Required signatures
+
+| Methods | Required signer |
+| --- | --- |
+| `create_stream` | The donor whose address is passed as `donor`. |
+| `top_up`, `cancel_stream`, `modify_rate` | The stream's donor (owner). |
+| `withdraw` | The stream's recipient NGO. |
+| `register` | The NGO owner whose address is passed as `owner`. |
+| `approve_ngo`, `revoke_ngo` | The registry's configured platform admin, rather than the NGO owner passed as `ngo_owner`. |
+
+The connected wallet signs transactions through `.signAndSend()`. Passing
+an address as an argument does not provide that address's authorization.
+Platform admin API requests also require a separate admin message
+signature through `signMessage`; that does not replace the on-chain admin
+signature.
+
+`WithdrawButton` also calls the read-only `pending_accrual({ stream_id })`
+before offering withdrawal confirmation. It reads the simulated `tx.result`
+without calling `.signAndSend()`, so this preview requires no signature.
 
 ## Fee estimation
 
-Every call site reads `tx.built?.fee` off the `AssembledTransaction`
-returned by the contract method (before calling `.signAndSend()`) and
-formats it with `formatEstimatedFee()` from `format.ts`, showing it in the
-UI while the wallet's signing prompt is open. This is possible because
-`Client.from()`'s generated methods already simulate the call to assemble
-the transaction — the fee is known before the user ever signs.
+The generated contract methods simulate calls to assemble transactions.
+Where an estimate is used, the handler reads `tx.built?.fee` from the
+returned `AssembledTransaction` before `.signAndSend()` and formats it with
+`formatEstimatedFee()` from `format.ts`.
+
+| Methods | Fee behavior in the frontend |
+| --- | --- |
+| `create_stream` | Displays the estimate in `CreateStreamForm` while signing, when available. |
+| `top_up`, `cancel_stream`, `modify_rate` | Display the estimate in `StreamControls` while an action is pending, when available. |
+| `withdraw` | Displays the estimate in `WithdrawButton` while withdrawing, when available. |
+| `register` | Displays the estimate on `/apply` while registering, when available. |
+| `approve_ngo` | Sets `estimatedFee` state on `/platform-admin`, but that state is never rendered. No fee estimate is displayed. |
+| `revoke_ngo` | Does not read, store, or display a fee estimate. |
+| `pending_accrual` | Simulation only; no transaction is signed or submitted and no fee is displayed. |
+
+These are estimates, not guarantees of the final charged fee.
 
 ## Error handling pattern
 
-All five call sites follow the same shape: `try { await
-client.<method>(...); await tx.signAndSend(); } catch (err) { <surface
-err.message, or a fallback string, via toast/inline error> }`. None of them
-parse arbitrary contract error codes into friendlier messages today except
-the two documented above (`ALREADY_REGISTERED`, implicitly `NotRegistered`
-via `approve_ngo`'s precondition) — turning more of `NGO_REGISTRY_ERRORS`
-(or an equivalent for the donation vault) into user-facing copy is a
-reasonable follow-up, not something this reference assumes has been done.
+Transaction handlers assemble the call and then await `.signAndSend()`
+inside a `try` block, surfacing failures through a toast or inline error.
+The read-only `pending_accrual` preview only simulates and reads the result.
+
+`CreateStreamForm`, `StreamControls`, and `WithdrawButton` use
+`describeContractError()` from `contractTypes.ts` to translate recognized
+contract errors into user-facing messages, falling back to the original
+error text. Registration handles `ALREADY_REGISTERED` separately as a
+no-op so the off-chain application can still be submitted. Platform admin
+approval and revocation display `err.message`, or a fallback string,
+through an error toast; they do not translate contract error codes.

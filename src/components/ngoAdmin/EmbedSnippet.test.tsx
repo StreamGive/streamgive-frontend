@@ -1,7 +1,7 @@
-import { render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderToString } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { APP_URL } from '@/lib/config';
 
@@ -9,11 +9,24 @@ import { EmbedSnippet } from './EmbedSnippet';
 
 const NGO_ID = 'ngo-123';
 
-vi.mock('@/components/toast/ToastProvider', () => ({
-  useToast: () => ({ showToast: vi.fn() }),
-}));
-
 describe('EmbedSnippet', () => {
+  const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
+
+  beforeEach(() => {
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: vi.fn().mockResolvedValue(undefined) },
+    });
+  });
+
+  afterEach(() => {
+    if (originalClipboard) {
+      Object.defineProperty(navigator, 'clipboard', originalClipboard);
+    } else {
+      Reflect.deleteProperty(navigator, 'clipboard');
+    }
+  });
+
   it('renders an iframe snippet using the browser origin and the given NGO id', () => {
     render(<EmbedSnippet ngoId={NGO_ID} />);
 
@@ -81,6 +94,35 @@ describe('EmbedSnippet', () => {
 
     expect(preview).toHaveAttribute('width', '450');
     expect(preview).toHaveAttribute('height', '750');
+  });
+
+  it('copies the snippet and announces success', async () => {
+    render(<EmbedSnippet ngoId={NGO_ID} />);
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+    const button = screen.getByRole('button', { name: 'Copy snippet' });
+
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(textarea.value);
+    expect(button).toHaveTextContent('Snippet copied!');
+    expect(screen.getByRole('status')).toHaveTextContent('Snippet copied to clipboard.');
+  });
+
+  it('shows an error instead of throwing when the clipboard write rejects', async () => {
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValue(new Error('Denied'));
+    render(<EmbedSnippet ngoId={NGO_ID} />);
+    const button = screen.getByRole('button', { name: 'Copy snippet' });
+
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    expect(button).toHaveTextContent('Copy failed');
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Could not copy the snippet. Select the text above and copy it manually.',
+    );
   });
 });
 

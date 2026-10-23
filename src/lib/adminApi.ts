@@ -1,8 +1,7 @@
 import type { WalletSignMessage } from '@/components/wallet/WalletProvider';
 
 import type { NgoApplication } from './api';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+import { API_URL } from './config';
 
 /** Same budget as the public API layer — long enough for a slow node, short
  * enough that the admin page doesn't hang forever on a dead endpoint. */

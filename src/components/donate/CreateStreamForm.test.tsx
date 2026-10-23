@@ -19,6 +19,7 @@ const CUSTOM_TOKEN_ADDRESS = 'C' + 'T'.repeat(55);
 
 const mockSignTransaction = vi.fn();
 const mockPush = vi.fn();
+let mockNetworkMismatch = false;
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush }),
@@ -32,6 +33,7 @@ vi.mock('@/components/wallet/WalletProvider', () => ({
     disconnect: vi.fn(),
     signTransaction: mockSignTransaction,
     signMessage: vi.fn(),
+    networkMismatch: mockNetworkMismatch,
   }),
 }));
 
@@ -52,6 +54,7 @@ vi.mock('@/lib/stellar', () => ({
   NATIVE_ACCOUNT_RESERVE: 10_000_000n,
   NATIVE_FEE_ESTIMATE: 1_000_000n,
   NATIVE_FEE_RESERVE: 11_000_000n,
+  NETWORK_NAME: 'Testnet',
 }));
 
 
@@ -63,6 +66,7 @@ vi.mock('@/lib/donationVaultClient', () => ({
 
 describe('CreateStreamForm', () => {
   beforeEach(() => {
+    mockNetworkMismatch = false;
     mockCreateStream.mockReset();
     mockPush.mockReset();
     mockGetTokenBalance.mockReset();
@@ -95,6 +99,46 @@ describe('CreateStreamForm', () => {
     await user.type(screen.getByPlaceholderText('100'), '100');
 
     expect(submit).not.toBeDisabled();
+  });
+
+  it('blocks review on the wrong network and re-enables it after switching back', async () => {
+    mockNetworkMismatch = true;
+    const user = userEvent.setup();
+    const { rerender } = render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+    await user.type(screen.getByPlaceholderText('100'), '100');
+    const submit = screen.getByRole('button', { name: /review & sign/i });
+    expect(submit).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/switch it to Testnet/i);
+    await user.click(submit);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mockCreateStream).not.toHaveBeenCalled();
+
+    mockNetworkMismatch = false;
+    rerender(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+    expect(submit).not.toBeDisabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('blocks signing if the wallet switches networks during confirmation', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+    await user.type(screen.getByPlaceholderText('100'), '100');
+    await user.click(screen.getByRole('button', { name: /review & sign/i }));
+
+    mockNetworkMismatch = true;
+    rerender(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+    const confirm = screen.getByRole('button', { name: /confirm & sign/i });
+    expect(confirm).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent(/switch it to Testnet/i);
+    await user.click(confirm);
+    expect(mockCreateStream).not.toHaveBeenCalled();
+
+    mockNetworkMismatch = false;
+    rerender(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+    expect(confirm).not.toBeDisabled();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('recalculates the displayed per-second rate as the amount and duration change', async () => {
@@ -379,6 +423,21 @@ describe('CreateStreamForm', () => {
 
     expect(await screen.findByText(/wallet balance: 2,000/i)).toBeInTheDocument();
     expect(mockGetTokenBalance).toHaveBeenCalledWith('CUSDCFAKE', DONOR_ADDRESS);
+  });
+
+  it('shows a retry message instead of a balance when the check fails, and recovers on retry', async () => {
+    const user = userEvent.setup();
+    mockGetTokenBalance.mockRejectedValueOnce(new Error('simulation failed'));
+    render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);
+
+    expect(await screen.findByText(/couldn't check your balance/i)).toBeInTheDocument();
+    expect(screen.queryByText(/wallet balance:/i)).not.toBeInTheDocument();
+
+    mockGetTokenBalance.mockResolvedValueOnce('50000000000'); // 5,000
+    await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText(/wallet balance: 5,000/i)).toBeInTheDocument();
+    expect(screen.queryByText(/couldn't check your balance/i)).not.toBeInTheDocument();
   });
 
   it('warns and disables submit when the entered amount exceeds the wallet balance', async () => {

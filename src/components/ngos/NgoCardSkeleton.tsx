@@ -2,7 +2,7 @@
  * getNgos() is in flight on the explorer page. */
 export function NgoCardSkeleton() {
   return (
-    <li className="animate-pulse rounded-lg border border-gray-200 p-6 dark:border-gray-800">
+    <li className="animate-pulse rounded-lg border border-gray-200 p-6 motion-reduce:animate-none dark:border-gray-800">
       <div className="h-5 w-2/3 rounded bg-gray-200 dark:bg-gray-800" />
 
       <dl className="mt-4 grid grid-cols-3 gap-3">

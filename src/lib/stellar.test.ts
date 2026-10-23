@@ -1,4 +1,32 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+// @vitest-environment node
+
+import type { Transaction } from '@stellar/stellar-sdk';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Keep real transaction construction while replacing the RPC boundary.
+// ESM namespace exports cannot be reassigned with vi.spyOn.
+const { simulateTransaction, scValToNative, isSimulationError } = vi.hoisted(() => ({
+  simulateTransaction: vi.fn<
+    (transaction: Transaction) => Promise<{ error?: string; result?: { retval: unknown } }>
+  >(),
+  scValToNative: vi.fn<(...args: unknown[]) => bigint>(),
+  isSimulationError: vi.fn<(...args: unknown[]) => boolean>(),
+}));
+
+vi.mock('@stellar/stellar-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@stellar/stellar-sdk')>();
+  return {
+    ...actual,
+    scValToNative,
+    rpc: {
+      ...actual.rpc,
+      Server: class {
+        simulateTransaction = simulateTransaction;
+      },
+      Api: { ...actual.rpc.Api, isSimulationError },
+    },
+  };
+});
 
 const TESTNET_PASSPHRASE = 'Test SDF Network ; September 2015';
 const MAINNET_PASSPHRASE = 'Public Global Stellar Network ; September 2015';
@@ -137,136 +165,73 @@ describe('getUsdcAssetAddress', () => {
 });
 
 describe('getTokenBalance', () => {
-  afterEach(() => {
-    vi.restoreAllMocks();
+  beforeEach(() => {
+    simulateTransaction.mockReset();
+    scValToNative.mockReset().mockReturnValue(42n);
+    isSimulationError.mockReset().mockReturnValue(false);
   });
 
   it('returns the balance string on a successful simulation', async () => {
-    // scValToNative returns a bigint for i128 retvals; the function converts
-    // it to a string via .toString().
-    const { rpc, scValToNative } = await import('@stellar/stellar-sdk');
+    const retval = {};
+    simulateTransaction.mockResolvedValue({ result: { retval } });
+    scValToNative.mockReturnValue(5_000_000_000n);
 
-    // Stub simulateTransaction to return a successful simulation result.
-    const simulateMock = vi.fn().mockResolvedValue({
-      result: {
-        retval: {} as ReturnType<typeof scValToNative>, // opaque — scValToNative is mocked below
-      },
-    });
-    vi.spyOn(rpc, 'Server').mockImplementation(
-      () => ({ simulateTransaction: simulateMock }) as unknown as InstanceType<typeof rpc.Server>,
-    );
-
-    // scValToNative is called with retval and must produce a bigint balance.
-    vi.spyOn(
-      await import('@stellar/stellar-sdk'),
-      'scValToNative',
-    ).mockReturnValue(BigInt('5000000000') as unknown as ReturnType<typeof scValToNative>);
-
-    // isSimulationError must return false so the happy path is followed.
-    vi.spyOn(rpc.Api, 'isSimulationError').mockReturnValue(false);
-
-    const { getTokenBalance } = await import('./stellar');
+    const { getTokenBalance } = await freshStellar(TESTNET_PASSPHRASE);
     const result = await getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS);
 
     expect(result).toBe('5000000000');
+    expect(scValToNative).toHaveBeenCalledWith(retval);
   });
 
-  it('returns null when the simulation reports an error', async () => {
-    const { rpc } = await import('@stellar/stellar-sdk');
+  it('rejects when the simulation reports an error, instead of returning null', async () => {
+    simulateTransaction.mockResolvedValue({ error: 'contract trap' });
+    isSimulationError.mockReturnValue(true);
 
-    const simulateMock = vi.fn().mockResolvedValue({ error: 'contract trap' });
-    vi.spyOn(rpc, 'Server').mockImplementation(
-      () => ({ simulateTransaction: simulateMock }) as unknown as InstanceType<typeof rpc.Server>,
-    );
-    // isSimulationError returns true — the function must bail out and return null.
-    vi.spyOn(rpc.Api, 'isSimulationError').mockReturnValue(true);
-
-    const { getTokenBalance } = await import('./stellar');
-    const result = await getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS);
-
-    expect(result).toBeNull();
+    const { getTokenBalance } = await freshStellar(TESTNET_PASSPHRASE);
+    await expect(getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS)).rejects.toThrow();
+    expect(scValToNative).not.toHaveBeenCalled();
   });
 
-  it('returns null when the simulation succeeds but has no result', async () => {
-    const { rpc } = await import('@stellar/stellar-sdk');
+  it('rejects when the simulation succeeds but has no result', async () => {
+    simulateTransaction.mockResolvedValue({});
 
-    // No `result` field — e.g. a view-only sim with no return value.
-    const simulateMock = vi.fn().mockResolvedValue({});
-    vi.spyOn(rpc, 'Server').mockImplementation(
-      () => ({ simulateTransaction: simulateMock }) as unknown as InstanceType<typeof rpc.Server>,
-    );
-    vi.spyOn(rpc.Api, 'isSimulationError').mockReturnValue(false);
-
-    const { getTokenBalance } = await import('./stellar');
-    const result = await getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS);
-
-    expect(result).toBeNull();
+    const { getTokenBalance } = await freshStellar(TESTNET_PASSPHRASE);
+    await expect(getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS)).rejects.toThrow();
+    expect(scValToNative).not.toHaveBeenCalled();
   });
 
-  it('returns null when simulateTransaction throws', async () => {
-    const { rpc } = await import('@stellar/stellar-sdk');
+  // The RPC outage / wrong-network case: simulateTransaction itself throws,
+  // as opposed to resolving with a simulation-level error above — both must
+  // reject distinguishably rather than collapsing to the same "null" a
+  // caller can't tell apart from a genuine zero balance.
+  it('propagates the error when simulateTransaction itself throws', async () => {
+    simulateTransaction.mockRejectedValue(new Error('network error'));
 
-    const simulateMock = vi.fn().mockRejectedValue(new Error('network error'));
-    vi.spyOn(rpc, 'Server').mockImplementation(
-      () => ({ simulateTransaction: simulateMock }) as unknown as InstanceType<typeof rpc.Server>,
-    );
-
-    const { getTokenBalance } = await import('./stellar');
-    const result = await getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS);
-
-    expect(result).toBeNull();
+    const { getTokenBalance } = await freshStellar(TESTNET_PASSPHRASE);
+    await expect(getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS)).rejects.toThrow('network error');
+    expect(scValToNative).not.toHaveBeenCalled();
   });
 
   it('builds the transaction from the dummy source account (sequence 0)', async () => {
-    const { rpc, scValToNative, Account } = await import('@stellar/stellar-sdk');
+    simulateTransaction.mockResolvedValue({ result: { retval: {} } });
 
-    const simulateMock = vi.fn().mockResolvedValue({ result: { retval: {} } });
-    vi.spyOn(rpc, 'Server').mockImplementation(
-      () => ({ simulateTransaction: simulateMock }) as unknown as InstanceType<typeof rpc.Server>,
-    );
-    vi.spyOn(
-      await import('@stellar/stellar-sdk'),
-      'scValToNative',
-    ).mockReturnValue(BigInt('1') as unknown as ReturnType<typeof scValToNative>);
-    vi.spyOn(rpc.Api, 'isSimulationError').mockReturnValue(false);
-
-    // Spy on Account construction so we can assert the source and sequence.
-    const accountSpy = vi.spyOn({ Account }, 'Account');
-
-    const { getTokenBalance } = await import('./stellar');
+    const { getTokenBalance } = await freshStellar(TESTNET_PASSPHRASE);
     await getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS);
 
-    // simulateTransaction must have been called with a built transaction.
-    expect(simulateMock).toHaveBeenCalledOnce();
-    // The transaction itself is built with the dummy source — verify by
-    // inspecting the Account the SDK would have used (sequence '0').
-    const txArg = simulateMock.mock.calls[0][0] as { source: string };
-    expect(txArg).toBeDefined();
-
-    // Suppress unused variable lint; the real assertion is above.
-    void accountSpy;
+    expect(simulateTransaction).toHaveBeenCalledOnce();
+    const [transaction] = simulateTransaction.mock.calls[0];
+    // TransactionBuilder increments the source account's initial sequence.
+    expect(transaction.sequence).toBe('1');
   });
 
   it('uses SIMULATION_SOURCE_ACCOUNT as the dummy source', async () => {
-    const { rpc, scValToNative } = await import('@stellar/stellar-sdk');
+    simulateTransaction.mockResolvedValue({ result: { retval: {} } });
 
-    const simulateMock = vi.fn().mockResolvedValue({ result: { retval: {} } });
-    vi.spyOn(rpc, 'Server').mockImplementation(
-      () => ({ simulateTransaction: simulateMock }) as unknown as InstanceType<typeof rpc.Server>,
-    );
-    vi.spyOn(
-      await import('@stellar/stellar-sdk'),
-      'scValToNative',
-    ).mockReturnValue(BigInt('42') as unknown as ReturnType<typeof scValToNative>);
-    vi.spyOn(rpc.Api, 'isSimulationError').mockReturnValue(false);
-
-    const { getTokenBalance } = await import('./stellar');
+    const { getTokenBalance } = await freshStellar(TESTNET_PASSPHRASE);
     await getTokenBalance(TOKEN_ADDRESS, WALLET_ADDRESS);
 
-    // The transaction passed to simulateTransaction must have been built
-    // from the all-zeros dummy account, not from the wallet address being queried.
-    const builtTx = simulateMock.mock.calls[0][0] as { toEnvelope(): unknown };
-    // The built Transaction exposes its source via .source
-    expect((builtTx as unknown as { source: string }).source).toBe(SIMULATION_SOURCE_ACCOUNT);
+    expect(simulateTransaction).toHaveBeenCalledOnce();
+    const [transaction] = simulateTransaction.mock.calls[0];
+    expect(transaction.source).toBe(SIMULATION_SOURCE_ACCOUNT);
   });
 });

@@ -43,7 +43,7 @@ vi.mock('@/lib/api', () => ({ getStreams }));
 
 // signAndSend never settles, so the component stays in its in-flight state
 // long enough to assert on the button labels.
-const neverSettles = () => ({ signAndSend: () => new Promise(() => {}) });
+const neverSettles = () => ({ signAndSend: () => new Promise<void>(() => {}) });
 
 type ActionResult = () => Promise<{
   built?: { fee: string };
@@ -273,6 +273,7 @@ describe('StreamControls', () => {
       expect(showToast).toHaveBeenCalledWith(
         'success',
         expect.stringContaining('Stream topped up'),
+        undefined,
       );
     });
 
@@ -307,7 +308,9 @@ describe('StreamControls', () => {
       useDonationVaultClient.mockReturnValue({ client, ready: true });
       getStreams.mockResolvedValue([TINY_BALANCE_STREAM]);
       const user = userEvent.setup();
-      render(<StreamControls stream={TINY_BALANCE_STREAM} onChanged={vi.fn()} />);
+      // The preview allows submission, but the refreshed balance has
+      // drained below the minimum rate by the time Confirm is clicked.
+      render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
 
       await user.click(screen.getByRole('button', { name: 'Modify rate' }));
       await user.click(screen.getByRole('button', { name: 'Confirm' }));
@@ -380,7 +383,11 @@ describe('StreamControls', () => {
 
       expect(await screen.findByRole('button', { name: 'Modify rate' })).toBeEnabled();
       expect(onChanged).toHaveBeenCalledTimes(1);
-      expect(showToast).toHaveBeenCalledWith('success', expect.stringContaining('Rate updated'));
+      expect(showToast).toHaveBeenCalledWith(
+        'success',
+        expect.stringContaining('Rate updated'),
+        undefined,
+      );
     });
 
     // issue #201: Confirm had no `disabled` guard for a pending submission
@@ -448,6 +455,7 @@ describe('StreamControls', () => {
       expect(showToast).toHaveBeenCalledWith(
         'success',
         expect.stringContaining('Stream cancelled'),
+        undefined,
       );
     });
 
@@ -470,6 +478,55 @@ describe('StreamControls', () => {
 
       expect(await screen.findByRole('button', { name: 'Cancel' })).toBeEnabled();
       expect(showToast).toHaveBeenCalledWith('error', 'Network error');
+    });
+  });
+
+  describe('keyboard focus across mode switches', () => {
+    it('moves focus to the amount input on entering top-up, and back to the Top up button on Back', async () => {
+      const user = userEvent.setup();
+      render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Top up' }));
+      expect(screen.getByLabelText(/amount to add/i)).toHaveFocus();
+
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      expect(screen.getByRole('button', { name: 'Top up' })).toHaveFocus();
+    });
+
+    it('moves focus to the duration select on entering modify, and back to the Modify rate button on Back', async () => {
+      const user = userEvent.setup();
+      render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Modify rate' }));
+      expect(screen.getByLabelText(/new duration/i)).toHaveFocus();
+
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      expect(screen.getByRole('button', { name: 'Modify rate' })).toHaveFocus();
+    });
+
+    it('moves focus to "Yes, cancel" on entering the cancel confirmation, and back to the Cancel button on Never mind', async () => {
+      const user = userEvent.setup();
+      render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.getByRole('button', { name: 'Yes, cancel' })).toHaveFocus();
+
+      await user.click(screen.getByRole('button', { name: 'Never mind' }));
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    });
+
+    it('moves focus to the status region when submitting leaves the trigger disabled', async () => {
+      const user = userEvent.setup();
+      render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Top up' }));
+      await user.type(screen.getByLabelText(/amount to add/i), '5');
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      // The Top up button is disabled (pending) by the time focus would
+      // move to it, so it can't take focus — the live region does instead.
+      expect(await screen.findByRole('button', { name: 'Topping up…' })).toBeDisabled();
+      expect(screen.getByRole('status')).toHaveFocus();
     });
   });
 });

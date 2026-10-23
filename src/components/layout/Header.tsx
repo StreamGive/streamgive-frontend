@@ -2,24 +2,66 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher';
 import { Logo } from '@/components/layout/Logo';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
+import { useWallet } from '@/components/wallet/WalletProvider';
+import { lookupNgoByAddress } from '@/lib/api';
+import { PLATFORM_ADMIN_ADDRESS } from '@/lib/config';
 
-const NAV_LINKS = [
+const BASE_NAV_LINKS = [
   { href: '/ngos', label: 'Explore NGOs' },
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/impact', label: 'Impact' },
   { href: '/apply', label: 'Apply as NGO' },
-  { href: '/ngo-admin', label: 'NGO Admin' },
-  { href: '/platform-admin', label: 'Platform Admin' },
 ];
+
+const NGO_ADMIN_LINK = { href: '/ngo-admin', label: 'NGO Admin' };
+const PLATFORM_ADMIN_LINK = { href: '/platform-admin', label: 'Platform Admin' };
 
 export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
+  const { address } = useWallet();
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileNavRef = useRef<HTMLElement>(null);
+
+  // Starts false and is only ever flipped true by a successful lookup, so
+  // the link stays hidden (rather than briefly flashing on) while we don't
+  // yet know whether this address owns an NGO.
+  const [ownsNgo, setOwnsNgo] = useState(false);
+
+  useEffect(() => {
+    if (!address) {
+      // A disconnected wallet must not keep showing the NGO Admin link from
+      // a previous session's lookup.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOwnsNgo(false);
+      return;
+    }
+    let current = true;
+    lookupNgoByAddress(address)
+      .then((ngo) => {
+        if (current) setOwnsNgo(ngo !== null);
+      })
+      .catch(() => {
+        if (current) setOwnsNgo(false);
+      });
+    return () => {
+      current = false;
+    };
+  }, [address]);
+
+  const isPlatformAdmin = Boolean(address) && address === PLATFORM_ADMIN_ADDRESS;
+
+  const navLinks = [
+    ...BASE_NAV_LINKS,
+    ...(ownsNgo ? [NGO_ADMIN_LINK] : []),
+    ...(isPlatformAdmin ? [PLATFORM_ADMIN_LINK] : []),
+  ];
 
   const isActiveLink = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -37,6 +79,40 @@ export function Header() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Escape and a click outside the open menu both close it — neither does
+  // anything on their own otherwise, unlike choosing a link, which already
+  // closes it via its own onClick. Both paths return focus to the toggle,
+  // since there's nothing else to reasonably land it on once the menu (and
+  // whatever was focused inside it) is gone.
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function closeAndRefocus() {
+      setMenuOpen(false);
+      toggleButtonRef.current?.focus();
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeAndRefocus();
+      }
+    }
+
+    function handleMouseDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (mobileNavRef.current?.contains(target)) return;
+      if (toggleButtonRef.current?.contains(target)) return;
+      closeAndRefocus();
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [menuOpen]);
 
   return (
     <>
@@ -57,8 +133,8 @@ export function Header() {
             StreamGive
           </Link>
 
-          <nav className="hidden items-center gap-6 md:flex">
-            {NAV_LINKS.map((link) => (
+          <nav aria-label="Main" className="hidden items-center gap-6 md:flex">
+            {navLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
@@ -67,6 +143,7 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
+            <LocaleSwitcher />
             <ThemeToggle />
             <ConnectWalletButton />
           </nav>
@@ -74,6 +151,7 @@ export function Header() {
           <div className="flex items-center gap-1 md:hidden">
             <ThemeToggle />
             <button
+              ref={toggleButtonRef}
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
               aria-expanded={menuOpen}
@@ -100,8 +178,13 @@ export function Header() {
         </div>
 
         {menuOpen && (
-          <nav id="mobile-nav" className="mt-4 flex flex-col gap-4 md:hidden">
-            {NAV_LINKS.map((link) => {
+          <nav
+            ref={mobileNavRef}
+            id="mobile-nav"
+            aria-label="Mobile"
+            className="mt-4 flex flex-col gap-4 md:hidden"
+          >
+            {navLinks.map((link) => {
               const isActive = isActiveLink(link.href);
 
               return (
@@ -121,6 +204,7 @@ export function Header() {
                 </Link>
               );
             })}
+            <LocaleSwitcher />
             <ConnectWalletButton />
           </nav>
         )}

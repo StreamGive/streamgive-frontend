@@ -197,7 +197,7 @@ describe('listNgoApplications', () => {
   it('includes the status query param when provided', async () => {
     const { listNgoApplications } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(
           JSON.stringify({ applications: [], total: 0, limit: 100, offset: 0 }),
@@ -216,7 +216,7 @@ describe('listNgoApplications', () => {
   it('omits the status query param when not provided', async () => {
     const { listNgoApplications } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(
           JSON.stringify({ applications: [], total: 0, limit: 100, offset: 0 }),
@@ -311,7 +311,7 @@ describe('reviewNgoApplication', () => {
   it('posts to the correct approve path', async () => {
     const { reviewNgoApplication } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(JSON.stringify(reviewedApplication), {
           status: 200,
@@ -331,7 +331,7 @@ describe('reviewNgoApplication', () => {
   it('posts to the correct reject path', async () => {
     const { reviewNgoApplication } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(JSON.stringify({ ...reviewedApplication, status: 'REJECTED' }), {
           status: 200,
@@ -350,7 +350,7 @@ describe('reviewNgoApplication', () => {
   it('includes a trimmed reviewNote in the request body when provided', async () => {
     const { reviewNgoApplication } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(JSON.stringify(reviewedApplication), {
           status: 200,
@@ -370,7 +370,7 @@ describe('reviewNgoApplication', () => {
   it('omits reviewNote from the request body when not provided', async () => {
     const { reviewNgoApplication } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(JSON.stringify(reviewedApplication), {
           status: 200,
@@ -390,7 +390,7 @@ describe('reviewNgoApplication', () => {
   it('omits reviewNote from the request body when an empty string is provided', async () => {
     const { reviewNgoApplication } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(JSON.stringify(reviewedApplication), {
           status: 200,
@@ -445,7 +445,7 @@ describe('reviewNgoApplication', () => {
   it('URL-encodes the application id in the path', async () => {
     const { reviewNgoApplication } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(JSON.stringify(reviewedApplication), {
           status: 200,

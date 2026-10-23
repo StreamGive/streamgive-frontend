@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { describeAmountError, formatAmountInput, parseAmount, truncateAddress } from './format';
 import { formatAmount, formatTokenAmount, formatTokenTotals } from './format';
-import { formatEstimatedFee, formatRemainingDuration } from './format';
+import { formatEstimatedFee, formatRate, formatRemainingDuration } from './format';
 import { getNativeAssetAddress, getUsdcAssetAddress } from './stellar';
 
 describe('formatAmount', () => {
@@ -87,6 +87,34 @@ describe('formatAmount', () => {
     it('returns the placeholder instead of throwing for non-numeric text', () => {
       expect(formatAmount('not-a-number')).toBe('—');
     });
+  });
+});
+
+describe('formatRate', () => {
+  it('preserves every digit above Number.MAX_SAFE_INTEGER', () => {
+    expect(formatRate(9007199254740993n)).toBe('900719925.4740993');
+  });
+
+  it('formats the maximum i128 value without rounding or scientific notation', () => {
+    expect(formatRate(170141183460469231731687303715884105727n)).toBe(
+      '17014118346046923173168730371588.4105727',
+    );
+  });
+
+  it.each([
+    [0n, '0.0000000'],
+    [1n, '0.0000001'],
+    [385n, '0.0000385'],
+    [10000000n, '1.0000000'],
+    [-1n, '-0.0000001'],
+  ])('formats %s with seven decimal places', (raw, expected) => {
+    expect(formatRate(raw)).toBe(expected);
+  });
+
+  it('respects custom token decimals, including zero', () => {
+    expect(formatRate(9007199254740993n, 6)).toBe('9007199254.740993');
+    expect(formatRate(1050000n, 6)).toBe('1.050000');
+    expect(formatRate(42n, 0)).toBe('42');
   });
 });
 

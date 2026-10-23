@@ -36,6 +36,9 @@ export type WalletSignTransaction = (
  * signing — callers just pass the plain message string. */
 export type WalletSignMessage = (message: string) => Promise<string>;
 
+export type WalletOption = { id: string; name: string; url: string };
+type SupportedWalletInfo = WalletOption & { isAvailable: boolean };
+
 type WalletContextValue = {
   address: string | null;
   connecting: boolean;
@@ -43,6 +46,12 @@ type WalletContextValue = {
   disconnect: () => void;
   signTransaction: WalletSignTransaction;
   signMessage: WalletSignMessage;
+  /** Populated instead of opening the kit's wallet-selection modal when
+   * connect() finds no supported wallet extension installed — each entry
+   * links to where that wallet can be installed. Null otherwise, including
+   * after dismissNoWalletPrompt() or a later successful connect(). */
+  noWalletOptions: WalletOption[] | null;
+  dismissNoWalletPrompt: () => void;
   /** True once a connected wallet reports a network passphrase that doesn't
    * match NETWORK_PASSPHRASE — signing will still open, but the resulting
    * transaction is built for the wrong network and fails on submission. */
@@ -142,7 +151,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(true);
   const [networkMismatch, setNetworkMismatch] = useState(false);
+  const [noWalletOptions, setNoWalletOptions] = useState<WalletOption[] | null>(null);
   const { showToast } = useToast();
+
+  const dismissNoWalletPrompt = useCallback(() => setNoWalletOptions(null), []);
 
   useEffect(() => {
     ensureKitInitialized();
@@ -193,6 +205,28 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     ensureKitInitialized();
     setConnecting(true);
     try {
+      // Checked up front, rather than letting the kit open its own
+      // wallet-selection modal: with nothing installed, that modal has
+      // nothing to list and no next step. getSupportedWallets() reports
+      // each module's installed state and an install `url`, so a visitor
+      // with no extension gets a prompt pointing at one instead. Cast
+      // rather than imported, since this file otherwise only relies on
+      // the handful of kit methods it already types above — a missing or
+      // renamed method here falls back to opening the modal as before,
+      // rather than failing closed.
+      const supported = await (
+        StellarWalletsKit as unknown as {
+          getSupportedWallets: () => Promise<SupportedWalletInfo[]>;
+        }
+      )
+        .getSupportedWallets()
+        .catch(() => null);
+      if (supported && !supported.some((wallet) => wallet.isAvailable)) {
+        setNoWalletOptions(supported.map(({ id, name, url }) => ({ id, name, url })));
+        return;
+      }
+      setNoWalletOptions(null);
+
       const { address } = await StellarWalletsKit.authModal();
       setAddress(address);
       setNetworkMismatch(await walletNetworkMismatch());
@@ -211,6 +245,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     // our side, which is what "disconnect" means for most dApps anyway.
     setAddress(null);
     setNetworkMismatch(false);
+    setNoWalletOptions(null);
   }, []);
 
   const signTransaction: WalletSignTransaction = useCallback(
@@ -254,8 +289,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       signTransaction,
       signMessage,
       networkMismatch,
+      noWalletOptions,
+      dismissNoWalletPrompt,
     }),
-    [address, connecting, connect, disconnect, signTransaction, signMessage, networkMismatch],
+    [
+      address,
+      connecting,
+      connect,
+      disconnect,
+      signTransaction,
+      signMessage,
+      networkMismatch,
+      noWalletOptions,
+      dismissNoWalletPrompt,
+    ],
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;

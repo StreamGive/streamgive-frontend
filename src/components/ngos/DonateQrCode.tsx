@@ -11,7 +11,12 @@ import { APP_URL } from '@/lib/config';
 // mismatch from reading `window` during the initial render.
 const noopSubscribe = () => () => {};
 
-const QR_SIZE_PX = 180;
+const QR_DISPLAY_SIZE_PX = 180;
+// The canvas is rendered at this pixel size and only scaled down for
+// on-page display (via CSS, below) — the "Download" link exports the same
+// canvas at its native resolution, which needs to be print-sized, not
+// screen-sized.
+const QR_EXPORT_SIZE_PX = 512;
 
 /**
  * Renders a QR code pointing at an NGO's donate page, for offline/in-person
@@ -43,8 +48,10 @@ export function DonateQrCode({ ngoId, ngoName }: { ngoId: string; ngoName: strin
       <QRCodeCanvas
         ref={canvasRef}
         value={donateUrl}
-        size={QR_SIZE_PX}
+        size={QR_EXPORT_SIZE_PX}
+        level="H"
         marginSize={2}
+        style={{ width: QR_DISPLAY_SIZE_PX, height: QR_DISPLAY_SIZE_PX }}
         role="img"
         aria-label={`QR code linking to ${ngoName}'s donate page`}
       />

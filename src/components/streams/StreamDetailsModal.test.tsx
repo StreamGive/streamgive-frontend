@@ -131,8 +131,10 @@ describe('StreamDetailsModal', () => {
     it('wraps Tab from the last focusable element back to the first', () => {
       render(<StreamDetailsModal stream={MOCK_STREAM} onClose={vi.fn()} />);
       const closeButton = screen.getByLabelText('Close');
-      const lastLink = screen.getByRole('link', { name: 'View contract' });
-      lastLink.focus();
+      // The on-chain ID's CopyAddressButton is the last focusable element —
+      // it comes after "View contract" in the dialog's own tab order.
+      const lastControl = screen.getByRole('button', { name: `Copy address ${MOCK_STREAM.onChainId}` });
+      lastControl.focus();
 
       const notPrevented = fireEvent.keyDown(document, { key: 'Tab' });
 
@@ -143,12 +145,12 @@ describe('StreamDetailsModal', () => {
     it('wraps Shift+Tab from the first focusable element to the last', () => {
       render(<StreamDetailsModal stream={MOCK_STREAM} onClose={vi.fn()} />);
       const closeButton = screen.getByLabelText('Close');
-      const lastLink = screen.getByRole('link', { name: 'View contract' });
+      const lastControl = screen.getByRole('button', { name: `Copy address ${MOCK_STREAM.onChainId}` });
       expect(closeButton).toHaveFocus();
 
       const notPrevented = fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
 
-      expect(lastLink).toHaveFocus();
+      expect(lastControl).toHaveFocus();
       expect(notPrevented).toBe(false);
     });
 

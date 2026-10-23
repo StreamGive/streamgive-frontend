@@ -68,12 +68,16 @@ export function useNgoRegistryClient(): {
 
   useEffect(() => {
     if (!address) {
+      // A disconnected wallet must not retain a usable signing client.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setClient(null);
       setInitError(null);
       return;
     }
 
     let cancelled = false;
+    // Invalidate the previous signer before fetching the new wallet's client.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setClient(null);
     setInitError(null);
 
@@ -86,10 +90,11 @@ export function useNgoRegistryClient(): {
       })
       .catch((err) => {
         if (!cancelled) {
-          const message =
-            err instanceof Error
-              ? `Couldn't reach the NGO registry contract: ${err.message}`
-              : `Couldn't reach the NGO registry contract.`;
+          // The error can be a developer-facing message (e.g. a missing
+          // NEXT_PUBLIC_*_CONTRACT_ID env var) that a visitor can't act on —
+          // logged for whoever's debugging the deployment, not shown.
+          console.error('Failed to initialize the NGO registry client:', err);
+          const message = "Couldn't reach the NGO registry contract. Please try again shortly.";
           setInitError(message);
           showToast('error', message);
         }

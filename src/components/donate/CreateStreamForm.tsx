@@ -7,11 +7,13 @@ import { ConnectWalletPrompt } from '@/components/common/ConnectWalletPrompt';
 import { useToast } from '@/components/toast/ToastProvider';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { useDonationVaultClient } from '@/lib/donationVaultClient';
+import { DURATIONS } from '@/lib/durations';
 import {
   describeAmountError,
   formatAmount,
   formatAmountInput,
   formatEstimatedFee,
+  formatRate,
   parseAmount,
   TOKEN_DECIMALS,
 } from '@/lib/format';
@@ -22,22 +24,16 @@ import {
   getTokenDecimals,
   getUsdcAssetAddress,
   NATIVE_FEE_RESERVE,
+  NETWORK_NAME,
   txToastAction,
 } from '@/lib/stellar';
 import { describeContractError } from '@/lib/contractTypes';
-
-
-const DURATIONS = [
-  { label: '1 week', seconds: 7 * 24 * 60 * 60 },
-  { label: '1 month', seconds: 30 * 24 * 60 * 60 },
-  { label: '3 months', seconds: 90 * 24 * 60 * 60 },
-  { label: '1 year', seconds: 365 * 24 * 60 * 60 },
-];
 
 // Quick-fill shortcuts for the "Total amount" field, in whichever token is
 // currently selected (the field isn't pinned to a single currency, so
 // these are unitless multipliers rather than e.g. "$5").
 const PRESET_AMOUNTS = [5, 10, 25, 100];
+const NETWORK_MISMATCH_MESSAGE = `Your wallet is on the wrong network. Switch it to ${NETWORK_NAME} before starting a stream.`;
 
 type TokenChoice = 'native' | 'usdc' | 'custom';
 type SubmitState = 'idle' | 'confirming' | 'signing' | 'success' | 'error';
@@ -58,7 +54,7 @@ export function CreateStreamForm({
   ngoName?: string;
 }) {
   const router = useRouter();
-  const { address } = useWallet();
+  const { address, networkMismatch } = useWallet();
   const { client, ready } = useDonationVaultClient();
   const { showToast } = useToast();
 
@@ -79,6 +75,13 @@ export function CreateStreamForm({
   const submitButtonRef = useRef<HTMLButtonElement>(null);
   const [walletBalance, setWalletBalance] = useState<string | null>(null);
   const [balanceLoading, setBalanceLoading] = useState(false);
+  // getTokenBalance throws rather than resolving null on failure (a wrong
+  // network, an RPC outage and a non-token address all look identical
+  // otherwise) — balanceError means "couldn't check", distinct from
+  // walletBalance simply not having resolved yet. retryKey re-runs the
+  // lookup without otherwise changing the effect's dependencies.
+  const [balanceError, setBalanceError] = useState(false);
+  const [balanceRetryKey, setBalanceRetryKey] = useState(0);
   // Native XLM and USDC are both Stellar Asset Contracts, which always use 7
   // decimals, but a custom token can declare any value here — tokenDecimals
   // is that token's real scale once looked up (issue #204). null means
@@ -144,6 +147,7 @@ export function CreateStreamForm({
 
 
   const canSubmit =
+    !networkMismatch &&
     isAmountValid &&
     isRateValid &&
     isTokenValid &&
@@ -204,17 +208,25 @@ export function CreateStreamForm({
     if (!address || !selectedTokenAddress) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setWalletBalance(null);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBalanceError(false);
       return;
     }
 
     let cancelled = false;
     setBalanceLoading(true);
     setWalletBalance(null);
+    setBalanceError(false);
 
     getTokenBalance(selectedTokenAddress, address)
       .then((balance) => {
         if (!cancelled) {
           setWalletBalance(balance);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setBalanceError(true);
         }
       })
       .finally(() => {
@@ -226,7 +238,7 @@ export function CreateStreamForm({
     return () => {
       cancelled = true;
     };
-  }, [address, selectedTokenAddress]);
+  }, [address, selectedTokenAddress, balanceRetryKey]);
 
   const durationLabel =
     DURATIONS.find((d) => d.seconds === durationSeconds)?.label ?? `${durationSeconds}s`;
@@ -265,6 +277,7 @@ export function CreateStreamForm({
 
   async function handleConfirm(): Promise<void> {
     if (
+      networkMismatch ||
       !address ||
       !client ||
       !selectedTokenAddress ||
@@ -462,6 +475,18 @@ export function CreateStreamForm({
               ? `Wallet balance: ${formatAmount(walletBalance, tokenDecimals ?? TOKEN_DECIMALS)}`
               : null}
         </p>
+        {balanceError && (
+          <p className="mt-1 flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
+            Couldn&apos;t check your balance.
+            <button
+              type="button"
+              onClick={() => setBalanceRetryKey((key) => key + 1)}
+              className="font-medium underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400"
+            >
+              Retry
+            </button>
+          </p>
+        )}
         {insufficientBalance && (
           <p className="mt-1 text-sm text-amber-700 dark:text-amber-400">
             This exceeds your wallet balance — the transaction will fail.
@@ -487,7 +512,7 @@ export function CreateStreamForm({
       {isAmountValid && rateRaw !== null && (
         <p id={!isRateValid ? 'amount-error' : undefined} className="text-sm text-gray-500 dark:text-gray-400">
           {isRateValid
-            ? `That's roughly ${(Number(rateRaw) / 10 ** (tokenDecimals ?? TOKEN_DECIMALS)).toFixed(tokenDecimals ?? TOKEN_DECIMALS)} per second.`
+            ? `That's roughly ${formatRate(rateRaw, tokenDecimals ?? TOKEN_DECIMALS)} per second.`
             : 'That amount is too small to stream over this duration — try a shorter one.'}
         </p>
       )}
@@ -509,6 +534,12 @@ export function CreateStreamForm({
 
       {submitState === 'error' && errorMessage && (
         <p className="text-sm text-red-600 dark:text-red-400">{errorMessage}</p>
+      )}
+
+      {networkMismatch && submitState !== 'confirming' && (
+        <p role="alert" className="text-sm text-amber-700 dark:text-amber-400">
+          {NETWORK_MISMATCH_MESSAGE}
+        </p>
       )}
 
       <button
@@ -537,6 +568,7 @@ export function CreateStreamForm({
           decimals={tokenDecimals ?? TOKEN_DECIMALS}
           durationLabel={durationLabel}
           effectiveEndDate={confirmationEndDate}
+          networkMismatch={networkMismatch}
           onConfirm={() => void handleConfirm()}
           onCancel={handleCancelConfirmation}
         />
@@ -564,6 +596,7 @@ function ConfirmDonationSummary({
   decimals,
   durationLabel,
   effectiveEndDate,
+  networkMismatch,
   onConfirm,
   onCancel,
 }: {
@@ -574,6 +607,7 @@ function ConfirmDonationSummary({
   decimals: number;
   durationLabel: string;
   effectiveEndDate: Date;
+  networkMismatch: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -637,7 +671,7 @@ function ConfirmDonationSummary({
   }, [onCancel]);
 
   const perSecondRate =
-    rateRaw !== null ? `${(Number(rateRaw) / 10 ** decimals).toFixed(decimals)} / second` : '—';
+    rateRaw !== null ? `${formatRate(rateRaw, decimals)} / second` : '—';
 
   return (
     <div
@@ -686,6 +720,12 @@ function ConfirmDonationSummary({
           </div>
         </dl>
 
+        {networkMismatch && (
+          <p role="alert" className="mt-6 text-sm text-amber-700 dark:text-amber-400">
+            {NETWORK_MISMATCH_MESSAGE}
+          </p>
+        )}
+
         <div className="mt-6 flex justify-end gap-3">
           <button
             type="button"
@@ -698,7 +738,8 @@ function ConfirmDonationSummary({
             type="button"
             ref={confirmButtonRef}
             onClick={onConfirm}
-            className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:focus-visible:ring-teal-400"
+            disabled={networkMismatch}
+            className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-gray-200 dark:focus-visible:ring-teal-400"
           >
             Confirm &amp; Sign
           </button>
