@@ -480,6 +480,55 @@ describe('StreamControls', () => {
       expect(showToast).toHaveBeenCalledWith('error', 'Network error');
     });
   });
+
+  describe('keyboard focus across mode switches', () => {
+    it('moves focus to the amount input on entering top-up, and back to the Top up button on Back', async () => {
+      const user = userEvent.setup();
+      render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Top up' }));
+      expect(screen.getByLabelText(/amount to add/i)).toHaveFocus();
+
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      expect(screen.getByRole('button', { name: 'Top up' })).toHaveFocus();
+    });
+
+    it('moves focus to the duration select on entering modify, and back to the Modify rate button on Back', async () => {
+      const user = userEvent.setup();
+      render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Modify rate' }));
+      expect(screen.getByLabelText(/new duration/i)).toHaveFocus();
+
+      await user.click(screen.getByRole('button', { name: 'Back' }));
+      expect(screen.getByRole('button', { name: 'Modify rate' })).toHaveFocus();
+    });
+
+    it('moves focus to "Yes, cancel" on entering the cancel confirmation, and back to the Cancel button on Never mind', async () => {
+      const user = userEvent.setup();
+      render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Cancel' }));
+      expect(screen.getByRole('button', { name: 'Yes, cancel' })).toHaveFocus();
+
+      await user.click(screen.getByRole('button', { name: 'Never mind' }));
+      expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
+    });
+
+    it('moves focus to the status region when submitting leaves the trigger disabled', async () => {
+      const user = userEvent.setup();
+      render(<StreamControls stream={STREAM} onChanged={vi.fn()} />);
+
+      await user.click(screen.getByRole('button', { name: 'Top up' }));
+      await user.type(screen.getByLabelText(/amount to add/i), '5');
+      await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+      // The Top up button is disabled (pending) by the time focus would
+      // move to it, so it can't take focus — the live region does instead.
+      expect(await screen.findByRole('button', { name: 'Topping up…' })).toBeDisabled();
+      expect(screen.getByRole('status')).toHaveFocus();
+    });
+  });
 });
 
 describe('computeModifyRate', () => {

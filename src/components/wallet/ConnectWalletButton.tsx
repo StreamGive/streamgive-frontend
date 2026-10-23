@@ -1,12 +1,9 @@
 'use client';
 
+import { truncateAddress } from '@/lib/format';
 import { NETWORK_NAME } from '@/lib/stellar';
 
 import { useWallet } from './WalletProvider';
-
-function truncateAddress(address: string): string {
-  return `${address.slice(0, 4)}…${address.slice(-4)}`;
-}
 
 export function ConnectWalletButton() {
   const {

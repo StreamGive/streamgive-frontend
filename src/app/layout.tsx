@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
+import { NextIntlClientProvider } from 'next-intl';
+import { getLocale, getMessages } from 'next-intl/server';
 
 import { AppShell } from '@/components/common/AppShell';
 import { THEME_INIT_SCRIPT } from '@/lib/theme';
@@ -53,18 +55,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Both come from src/i18n/request.ts (wired up via next.config.ts's
+  // withNextIntl), which resolves the locale from the NEXT_LOCALE cookie.
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
     // suppressHydrationWarning: THEME_INIT_SCRIPT adds a `dark`/`light`
     // class here before React hydrates, which never matches the
     // server-rendered markup (the server doesn't know the client's
     // preference) — that mismatch is expected and this is the documented
     // way to silence the resulting warning without disabling it app-wide.
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <head>
         {/* Must run synchronously, before paint, to avoid a flash of the
             wrong theme — see THEME_INIT_SCRIPT's own comment. */}
@@ -73,7 +80,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} bg-white text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100`}
       >
-        <AppShell>{children}</AppShell>
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <AppShell>{children}</AppShell>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

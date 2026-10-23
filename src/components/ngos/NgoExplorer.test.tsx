@@ -144,4 +144,41 @@ describe('NgoExplorer', () => {
       expect(card.getAllByRole('link')).toHaveLength(1);
     }
   });
+
+  it('sorts "Most committed" by comparing raw totals as BigInt, not parseFloat', () => {
+    // 2^53 and 2^53 + 1 round to the identical double under parseFloat —
+    // a parseFloat-based sort sees a tie and (being a stable sort) leaves
+    // them in input order, same as if it had sorted them wrong. Only a
+    // BigInt comparison tells them apart.
+    const smaller = makeNgo({
+      id: 'smaller',
+      name: 'Smaller Totals Org',
+      stats: {
+        totalCommitted: '9007199254740992', // 2^53
+        totalWithdrawn: '0',
+        activeStreamCount: 0,
+        donorCount: 0,
+      },
+    });
+    const larger = makeNgo({
+      id: 'larger',
+      name: 'Larger Totals Org',
+      stats: {
+        totalCommitted: '9007199254740993', // 2^53 + 1
+        totalWithdrawn: '0',
+        activeStreamCount: 0,
+        donorCount: 0,
+      },
+    });
+    // Input order puts the smaller total first, so a no-op "sort" would
+    // leave it first too — the opposite of what "Most committed" promises.
+    render(<NgoExplorer ngos={[smaller, larger]} />);
+
+    fireEvent.change(screen.getByLabelText('Sort NGOs'), {
+      target: { value: 'most-committed' },
+    });
+
+    const names = screen.getAllByRole('heading', { level: 2 }).map((el) => el.textContent);
+    expect(names).toEqual(['Larger Totals Org', 'Smaller Totals Org']);
+  });
 });

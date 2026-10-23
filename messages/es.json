@@ -1,0 +1,27 @@
+{
+  "HomePage": {
+    "heroHeading": "Dona como un flujo, no como un clic único.",
+    "heroSubtext": "StreamGive te permite apoyar a ONGs verificadas en Stellar con donaciones continuas y cancelables en cualquier momento: transparentes, en la cadena y al instante.",
+    "exploreNgos": "Explorar ONGs"
+  },
+  "HowItWorks": {
+    "heading": "Cómo funciona",
+    "steps": [
+      {
+        "title": "Conecta tu billetera",
+        "description": "Freighter o cualquier billetera Stellar compatible: un clic, sin necesidad de crear una cuenta."
+      },
+      {
+        "title": "Inicia un flujo",
+        "description": "Elige una ONG verificada, define un monto y una tasa. Reciben el pago de forma continua, segundo a segundo, no en una sola suma."
+      },
+      {
+        "title": "Mantén el control",
+        "description": "Recarga, ajusta la tasa o cancela en cualquier momento. Los fondos no utilizados siempre vuelven a ti, al instante."
+      }
+    ]
+  },
+  "LocaleSwitcher": {
+    "label": "Idioma"
+  }
+}

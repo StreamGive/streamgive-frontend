@@ -19,7 +19,13 @@ function sortNgos(ngos: NgoProfile[], sort: SortOption): NgoProfile[] {
     return copy.sort((a, b) => b.stats.activeStreamCount - a.stats.activeStreamCount);
   }
   if (sort === 'most-committed') {
-    return copy.sort((a, b) => parseFloat(b.stats.totalCommitted) - parseFloat(a.stats.totalCommitted));
+    // totalCommitted is a raw i128 string — compared as BigInt, not via
+    // parseFloat, which loses precision above 2^53 and can misorder large
+    // totals (same reasoning as NgoAdminStreamList's balance sort).
+    return copy.sort((a, b) => {
+      const diff = BigInt(b.stats.totalCommitted) - BigInt(a.stats.totalCommitted);
+      return diff > 0n ? 1 : diff < 0n ? -1 : 0;
+    });
   }
   // newest: sort by createdAt descending
   return copy.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());

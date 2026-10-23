@@ -1,10 +1,18 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+import { API_URL } from './config';
 
 // A hung backend should fail loudly rather than leave the UI on a loading
 // spinner forever. AbortSignal.timeout() rejects the fetch with a
 // TimeoutError, which every caller already treats like any other failed
 // fetch (generic catch → "couldn't reach the API" messaging).
 const API_TIMEOUT_MS = 10_000;
+
+/** The signal every fetch call below sends: the request's own timeout,
+ * combined with a caller-supplied signal (e.g. a polling effect's cleanup)
+ * when there is one, so either can cancel the fetch. */
+function withTimeout(signal?: AbortSignal): AbortSignal {
+  const timeout = AbortSignal.timeout(API_TIMEOUT_MS);
+  return signal ? AbortSignal.any([signal, timeout]) : timeout;
+}
 
 /** Thrown by API calls that need callers to branch on the HTTP status
  * (e.g. 409 conflict vs. other failures) rather than just knowing a
@@ -39,9 +47,7 @@ export type Ngo = {
 export async function getNgos(signal?: AbortSignal): Promise<Ngo[]> {
   const res = await fetch(`${API_URL}/ngos`, {
     next: { revalidate: 30 },
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(API_TIMEOUT_MS)])
-      : AbortSignal.timeout(API_TIMEOUT_MS),
+    signal: withTimeout(signal),
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch NGOs: ${res.status}`);
@@ -81,9 +87,7 @@ export type NgoProfile = Ngo & {
 export async function getNgo(id: string, signal?: AbortSignal): Promise<NgoProfile | null> {
   const res = await fetch(`${API_URL}/ngos/${encodeURIComponent(id)}`, {
     next: { revalidate: 30 },
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(API_TIMEOUT_MS)])
-      : AbortSignal.timeout(API_TIMEOUT_MS),
+    signal: withTimeout(signal),
   });
   if (res.status === 404) {
     return null;
@@ -108,7 +112,7 @@ export async function getNgo(id: string, signal?: AbortSignal): Promise<NgoProfi
 export async function lookupNgoByAddress(address: string): Promise<NgoProfile | null> {
   const params = new URLSearchParams({ address });
   const res = await fetch(`${API_URL}/ngos/lookup?${params.toString()}`, {
-    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    signal: withTimeout(),
   });
   if (res.status === 404) {
     return null;
@@ -152,9 +156,7 @@ export async function getStreams(
   if (filter.limit) params.set('limit', String(filter.limit));
 
   const res = await fetch(`${API_URL}/streams?${params.toString()}`, {
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(API_TIMEOUT_MS)])
-      : AbortSignal.timeout(API_TIMEOUT_MS),
+    signal: withTimeout(signal),
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch streams: ${res.status}`);
@@ -187,9 +189,7 @@ export type Withdrawal = {
  */
 export async function getWithdrawals(ngoId: string, signal?: AbortSignal): Promise<Withdrawal[]> {
   const res = await fetch(`${API_URL}/ngos/${encodeURIComponent(ngoId)}/withdrawals`, {
-    signal: signal
-      ? AbortSignal.any([signal, AbortSignal.timeout(API_TIMEOUT_MS)])
-      : AbortSignal.timeout(API_TIMEOUT_MS),
+    signal: withTimeout(signal),
   });
   if (!res.ok) {
     throw new Error(`Failed to fetch withdrawals for NGO ${ngoId}: ${res.status}`);
@@ -235,7 +235,7 @@ export async function getApplicationStatus(
 ): Promise<NgoApplicationStatus | null> {
   const params = new URLSearchParams({ ownerAddress });
   const res = await fetch(`${API_URL}/ngo-applications/status?${params.toString()}`, {
-    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    signal: withTimeout(),
   });
   if (res.status === 404) {
     return null;
@@ -286,7 +286,7 @@ export async function submitNgoApplication(input: NgoApplicationInput): Promise<
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(input),
-    signal: AbortSignal.timeout(API_TIMEOUT_MS),
+    signal: withTimeout(),
   });
 
   if (res.status === 409) {

@@ -79,6 +79,15 @@ export function tokenSymbol(tokenAddress: string): string {
   return truncateAddress(tokenAddress);
 }
 
+/** Like `tokenSymbol`, but for display contexts that want the token's full
+ * identity rather than a shortened one: "XLM" for the native asset, or the
+ * token's full (untruncated) contract address for anything else — there's
+ * no symbol/name resolution for arbitrary tokens, only the native asset's
+ * address is derivable client-side. */
+export function tokenLabel(tokenAddress: string): string {
+  return tokenAddress === getNativeAssetAddress() ? 'XLM' : tokenAddress;
+}
+
 /** `formatAmount` plus the token's symbol, so "100" can't be mistaken for
  * the wrong asset (e.g. "100 XLM", "100 USDC", "100 CABC…WXYZ"). */
 export function formatTokenAmount(
@@ -242,4 +251,16 @@ export function truncateAddress(address: string): string {
     return address;
   }
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
+}
+
+/** Formats an ISO timestamp as a bare date (no time), in the viewer's own
+ * locale and timezone. */
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString();
+}
+
+/** Formats an ISO timestamp as a date and time, in the viewer's own locale
+ * and timezone. */
+export function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString();
 }

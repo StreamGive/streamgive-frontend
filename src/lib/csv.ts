@@ -1,6 +1,5 @@
 import type { Stream } from './api';
-import { formatRemainingDuration, formatTokenAmount } from './format';
-import { getNativeAssetAddress } from './stellar';
+import { formatRemainingDuration, formatTokenAmount, tokenLabel } from './format';
 
 const UTF8_BOM = '\uFEFF';
 
@@ -15,12 +14,6 @@ const CSV_HEADERS = [
   'Remaining',
   'Created',
 ];
-
-// There's no symbol/name resolution for arbitrary tokens — only the native
-// asset's contract address is derivable client-side.
-function tokenLabel(tokenAddress: string): string {
-  return tokenAddress === getNativeAssetAddress() ? 'XLM' : tokenAddress;
-}
 
 function escapeCsvField(value: string): string {
   // A field starting with =, +, - or @ runs as a formula when opened in a

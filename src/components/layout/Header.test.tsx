@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -8,6 +8,14 @@ const mockUsePathname = vi.fn(() => '/ngos');
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
+// Just enough for LocaleSwitcher (rendered inside Header) to not crash for
+// lack of a real NextIntlClientProvider context.
+vi.mock('next-intl', () => ({
+  useLocale: () => 'en',
+  useTranslations: () => (key: string) => key,
 }));
 
 vi.mock('@/components/wallet/WalletProvider', () => ({
@@ -111,6 +119,51 @@ describe('Header', () => {
     await user.click(link!);
 
     expect(document.getElementById('mobile-nav')).not.toBeInTheDocument();
+  });
+
+  describe('closing the mobile menu', () => {
+    it('closes on Escape and returns focus to the toggle', async () => {
+      const user = userEvent.setup();
+      render(<Header />);
+      const toggle = screen.getByRole('button', { name: 'Toggle menu' });
+
+      await user.click(toggle);
+      expect(document.getElementById('mobile-nav')).toBeInTheDocument();
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+
+      expect(document.getElementById('mobile-nav')).not.toBeInTheDocument();
+      expect(toggle).toHaveFocus();
+    });
+
+    it('closes on a click outside the menu and returns focus to the toggle', async () => {
+      const user = userEvent.setup();
+      render(
+        <>
+          <Header />
+          <button type="button">Outside</button>
+        </>,
+      );
+      const toggle = screen.getByRole('button', { name: 'Toggle menu' });
+
+      await user.click(toggle);
+      expect(document.getElementById('mobile-nav')).toBeInTheDocument();
+
+      fireEvent.mouseDown(screen.getByRole('button', { name: 'Outside' }));
+
+      expect(document.getElementById('mobile-nav')).not.toBeInTheDocument();
+      expect(toggle).toHaveFocus();
+    });
+
+    it('stays open when the click is inside the menu itself', async () => {
+      const user = userEvent.setup();
+      render(<Header />);
+
+      await user.click(screen.getByRole('button', { name: 'Toggle menu' }));
+      fireEvent.mouseDown(document.getElementById('mobile-nav')!);
+
+      expect(document.getElementById('mobile-nav')).toBeInTheDocument();
+    });
   });
 
   describe('active link highlight', () => {

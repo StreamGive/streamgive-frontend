@@ -1,3 +1,6 @@
+/** Base URL of the `streamgive-backend` API every fetch call targets. */
+export const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+
 /**
  * Server-render fallback for the app's own origin.
  *

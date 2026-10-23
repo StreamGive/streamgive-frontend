@@ -90,4 +90,30 @@ describe('useDonationVaultClient', () => {
     expect(clientFrom).toHaveBeenCalledTimes(1);
     expect(showToast).toHaveBeenCalledTimes(1);
   });
+
+  it('shows a user-friendly toast instead of the raw error, and logs the real one to the console', async () => {
+    const { useDonationVaultClient } = await freshDonationVaultClient();
+    // Stands in for the actual failure this was reported against — a
+    // missing NEXT_PUBLIC_DONATION_VAULT_CONTRACT_ID throws exactly this
+    // developer-facing message from getDonationVaultClient.
+    const devError = new Error('NEXT_PUBLIC_DONATION_VAULT_CONTRACT_ID is not set');
+    clientFrom.mockRejectedValue(devError);
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<Probe useDonationVaultClient={useDonationVaultClient} />);
+
+    await vi.waitFor(() => expect(showToast).toHaveBeenCalled());
+
+    expect(showToast).toHaveBeenCalledWith(
+      'error',
+      "Couldn't reach the donation contract. Please try again shortly.",
+    );
+    expect(showToast).not.toHaveBeenCalledWith(
+      'error',
+      expect.stringContaining('NEXT_PUBLIC_DONATION_VAULT_CONTRACT_ID'),
+    );
+    expect(consoleError).toHaveBeenCalledWith(expect.any(String), devError);
+
+    consoleError.mockRestore();
+  });
 });

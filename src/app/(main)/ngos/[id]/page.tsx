@@ -5,14 +5,10 @@ import { notFound } from 'next/navigation';
 import { CopyLinkButton } from '@/components/common/CopyLinkButton';
 import { DonateQrCode } from '@/components/ngos/DonateQrCode';
 import { getNgo, getStreams, type NgoProfile, type Stream } from '@/lib/api';
-import { formatAmount, formatTokenAmount, truncateAddress } from '@/lib/format';
+import { formatAmount, formatDate, formatTokenAmount, truncateAddress } from '@/lib/format';
 import { explorerUrl } from '@/lib/stellar';
 
 const RECENT_STREAMS_LIMIT = 10;
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString();
-}
 
 /** Only http(s) URLs are rendered as links, so a stored `javascript:` or
  * other scheme can never become a clickable href. */
@@ -37,9 +33,33 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'NGO not found' };
   }
 
+  const description = `Support ${ngo.name} with a recurring, streaming donation on Stellar.`;
+  // Relative — resolved against metadataBase (the root layout sets it to
+  // NEXT_PUBLIC_APP_URL), same as the root layout's own openGraph/twitter.
+  const profileUrl = `/ngos/${id}`;
+
   return {
     title: ngo.name,
-    description: `Support ${ngo.name} with a recurring, streaming donation on Stellar.`,
+    description,
+    alternates: {
+      canonical: profileUrl,
+    },
+    openGraph: {
+      title: ngo.name,
+      description,
+      type: 'website',
+      url: profileUrl,
+      // /opengraph-image is the site-wide share image (src/app/opengraph-image.tsx)
+      // — there's no per-NGO image to generate one from, so every profile
+      // shares it rather than going without a preview image at all.
+      images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'StreamGive' }],
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: ngo.name,
+      description,
+      images: ['/opengraph-image'],
+    },
   };
 }
 

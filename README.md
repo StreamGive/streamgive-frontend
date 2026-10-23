@@ -11,6 +11,7 @@ platform for verified NGOs on Stellar.
 - Stellar SDK (`@stellar/stellar-sdk`) for Soroban contract calls
 - Vitest and Testing Library for unit and component tests
 - Playwright for end-to-end tests
+- next-intl for i18n (scaffolding so far — see [docs/I18N.md](./docs/I18N.md))
 
 See [docs/COMPONENTS.md](./docs/COMPONENTS.md) for a component tree of
 `src/components/` with a one-line description of each piece,
@@ -25,7 +26,8 @@ the dark-mode strategy.
 
 See [docs/DATA_FETCHING.md](./docs/DATA_FETCHING.md) for server/client data
 loading, cache revalidation, polling intervals, and the known 1+N impact
-fetch pattern.
+fetch pattern, and [docs/I18N.md](./docs/I18N.md) for how translations are
+wired up and how to add a language.
 
 ## Local development
 

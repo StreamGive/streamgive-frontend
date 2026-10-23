@@ -1,8 +1,7 @@
 import type { WalletSignMessage } from '@/components/wallet/WalletProvider';
 
 import type { NgoApplication } from './api';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+import { API_URL } from './config';
 
 /** The backend accepts a signature within MAX_CLOCK_SKEW_MS (5 minutes) of
   * its timestamp, so one we just made stays valid for that long. Reused up

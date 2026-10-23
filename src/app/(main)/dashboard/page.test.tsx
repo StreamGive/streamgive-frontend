@@ -60,6 +60,8 @@ describe('DashboardPage', () => {
       signTransaction: vi.fn(),
       signMessage: vi.fn(),
       networkMismatch: false,
+      noWalletOptions: null,
+      dismissNoWalletPrompt: vi.fn(),
     });
   }
 
@@ -85,6 +87,8 @@ describe('DashboardPage', () => {
       signTransaction: vi.fn(),
       signMessage: vi.fn(),
       networkMismatch: false,
+      noWalletOptions: null,
+      dismissNoWalletPrompt: vi.fn(),
     });
 
     let resolveFetch: (streams: Stream[]) => void = () => {};
@@ -115,6 +119,8 @@ describe('DashboardPage', () => {
       signTransaction: vi.fn(),
       signMessage: vi.fn(),
       networkMismatch: false,
+      noWalletOptions: null,
+      dismissNoWalletPrompt: vi.fn(),
     });
 
     render(<DashboardPage />);
@@ -132,6 +138,8 @@ describe('DashboardPage', () => {
       signTransaction: vi.fn(),
       signMessage: vi.fn(),
       networkMismatch: false,
+      noWalletOptions: null,
+      dismissNoWalletPrompt: vi.fn(),
     });
     const wallet = vi.spyOn(WalletProviderMod, 'useWallet');
     wallet.mockReturnValue(walletFor('GOLD'));
@@ -297,6 +305,8 @@ describe('DashboardPage', () => {
         signTransaction: vi.fn(),
         signMessage: vi.fn(),
         networkMismatch: false,
+        noWalletOptions: null,
+        dismissNoWalletPrompt: vi.fn(),
       });
       vi.spyOn(ApiMod, 'getStreams').mockResolvedValue(streams);
       render(<DashboardPage />);
@@ -389,6 +399,8 @@ describe('DashboardPage', () => {
         signTransaction: vi.fn(),
         signMessage: vi.fn(),
         networkMismatch: false,
+        noWalletOptions: null,
+        dismissNoWalletPrompt: vi.fn(),
       });
       vi.spyOn(ApiMod, 'getStreams').mockResolvedValue(streams);
       vi.mocked(CsvMod.buildDonationHistoryCsv).mockReturnValue('id,status\n101,ACTIVE');
@@ -530,6 +542,8 @@ describe('DashboardPage', () => {
         signTransaction: vi.fn(),
         signMessage: vi.fn(),
         networkMismatch: false,
+        noWalletOptions: null,
+        dismissNoWalletPrompt: vi.fn(),
       });
       vi.spyOn(ApiMod, 'getStreams').mockResolvedValue([streamOldest, streamMiddle, streamNewest]);
     }

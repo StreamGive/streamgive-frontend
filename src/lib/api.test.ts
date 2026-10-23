@@ -39,9 +39,14 @@ describe('api network errors', () => {
     await expect(getStreams({ donor: 'GABC' })).rejects.toThrow('fetch failed');
   });
 
-  it('rejects once a stalled request hits the 10s timeout', async () => {
-    vi.useFakeTimers();
-    try {
+  it(
+    'rejects once a stalled request hits the 10s timeout',
+    async () => {
+      // AbortSignal.timeout() schedules its own internal timer outside of
+      // the global setTimeout/setInterval that vi.useFakeTimers() patches,
+      // so it keeps running on the real clock even under fake timers —
+      // this has to let the real 10s elapse rather than fast-forward it.
+      //
       // A realistic hung fetch: the promise it returns never settles on its
       // own — it only rejects if/when the signal passed to it aborts, same
       // as a real fetch() would once AbortSignal.timeout() fires.
@@ -56,15 +61,10 @@ describe('api network errors', () => {
         }),
       );
 
-      const pending = getNgos();
-
-      await vi.advanceTimersByTimeAsync(10_000);
-
-      await expect(pending).rejects.toBeTruthy();
-    } finally {
-      vi.useRealTimers();
-    }
-  });
+      await expect(getNgos()).rejects.toBeTruthy();
+    },
+    15_000,
+  );
 });
 
 // ---------------------------------------------------------------------------

@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher';
 import { Logo } from '@/components/layout/Logo';
 import { ThemeToggle } from '@/components/layout/ThemeToggle';
 import { ConnectWalletButton } from '@/components/wallet/ConnectWalletButton';
@@ -25,6 +26,8 @@ export function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = usePathname();
   const { address } = useWallet();
+  const toggleButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileNavRef = useRef<HTMLElement>(null);
 
   // Starts false and is only ever flipped true by a successful lookup, so
   // the link stays hidden (rather than briefly flashing on) while we don't
@@ -33,6 +36,9 @@ export function Header() {
 
   useEffect(() => {
     if (!address) {
+      // A disconnected wallet must not keep showing the NGO Admin link from
+      // a previous session's lookup.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOwnsNgo(false);
       return;
     }
@@ -74,6 +80,40 @@ export function Header() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Escape and a click outside the open menu both close it — neither does
+  // anything on their own otherwise, unlike choosing a link, which already
+  // closes it via its own onClick. Both paths return focus to the toggle,
+  // since there's nothing else to reasonably land it on once the menu (and
+  // whatever was focused inside it) is gone.
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function closeAndRefocus() {
+      setMenuOpen(false);
+      toggleButtonRef.current?.focus();
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        closeAndRefocus();
+      }
+    }
+
+    function handleMouseDown(event: MouseEvent) {
+      const target = event.target as Node;
+      if (mobileNavRef.current?.contains(target)) return;
+      if (toggleButtonRef.current?.contains(target)) return;
+      closeAndRefocus();
+    }
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [menuOpen]);
+
   return (
     <>
       <a
@@ -103,6 +143,7 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
+            <LocaleSwitcher />
             <ThemeToggle />
             <ConnectWalletButton />
           </nav>
@@ -110,6 +151,7 @@ export function Header() {
           <div className="flex items-center gap-1 md:hidden">
             <ThemeToggle />
             <button
+              ref={toggleButtonRef}
               type="button"
               onClick={() => setMenuOpen((open) => !open)}
               aria-expanded={menuOpen}
@@ -136,7 +178,12 @@ export function Header() {
         </div>
 
         {menuOpen && (
-          <nav id="mobile-nav" aria-label="Mobile" className="mt-4 flex flex-col gap-4 md:hidden">
+          <nav
+            ref={mobileNavRef}
+            id="mobile-nav"
+            aria-label="Mobile"
+            className="mt-4 flex flex-col gap-4 md:hidden"
+          >
             {navLinks.map((link) => {
               const isActive = isActiveLink(link.href);
 
@@ -157,6 +204,7 @@ export function Header() {
                 </Link>
               );
             })}
+            <LocaleSwitcher />
             <ConnectWalletButton />
           </nav>
         )}

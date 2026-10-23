@@ -183,6 +183,7 @@ export default function ApplyPage() {
               <span className="text-sm font-medium">Organization name</span>
               <input
                 type="text"
+                autoComplete="organization"
                 value={name}
                 onChange={(event) => setName(event.target.value)}
                 required
@@ -210,6 +211,8 @@ export default function ApplyPage() {
               <span className="text-sm font-medium">Contact email</span>
               <input
                 type="email"
+                autoComplete="email"
+                inputMode="email"
                 value={contactEmail}
                 onChange={(event) => setContactEmail(event.target.value)}
                 required
@@ -221,6 +224,8 @@ export default function ApplyPage() {
               <span className="text-sm font-medium">Website (optional)</span>
               <input
                 type="url"
+                autoComplete="url"
+                inputMode="url"
                 value={website}
                 onChange={(event) => setWebsite(event.target.value)}
                 placeholder="https://"
@@ -232,6 +237,7 @@ export default function ApplyPage() {
               <span className="text-sm font-medium">Country (optional)</span>
               <input
                 type="text"
+                autoComplete="country-name"
                 value={country}
                 onChange={(event) => setCountry(event.target.value)}
                 maxLength={COUNTRY_MAX_LENGTH}

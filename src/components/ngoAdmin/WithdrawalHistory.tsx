@@ -3,13 +3,9 @@
 import { useEffect, useState } from 'react';
 
 import { getWithdrawals, type Withdrawal } from '@/lib/api';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, formatDateTime } from '@/lib/format';
 
 const PAGE_SIZE = 10;
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString();
-}
 
 /**
  * Past withdrawal transactions for an NGO, so admins can reconcile their
@@ -123,7 +119,7 @@ export function WithdrawalHistory({ ngoId }: { ngoId: string }) {
               {visibleWithdrawals.map((withdrawal) => (
                 <tr key={withdrawal.id} className="border-b border-gray-100 dark:border-gray-900">
                   <td className="py-2 text-gray-600 dark:text-gray-400">
-                    {formatDate(withdrawal.createdAt)}
+                    {formatDateTime(withdrawal.createdAt)}
                   </td>
                   <td className="py-2">#{withdrawal.streamId}</td>
                   <td className="py-2 text-right font-medium">

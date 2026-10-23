@@ -21,6 +21,8 @@ describe('ConnectWalletPrompt', () => {
       signTransaction: vi.fn(),
       signMessage: vi.fn(),
       networkMismatch: false,
+      noWalletOptions: null,
+      dismissNoWalletPrompt: vi.fn(),
     });
   });
 

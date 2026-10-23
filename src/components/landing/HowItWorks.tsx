@@ -1,24 +1,16 @@
-const steps = [
-  {
-    title: 'Connect your wallet',
-    description: 'Freighter or any supported Stellar wallet — one click, no account to create.',
-  },
-  {
-    title: 'Start a stream',
-    description:
-      'Pick a verified NGO, set an amount and a rate. They get paid continuously, second by second — not in one lump sum.',
-  },
-  {
-    title: 'Stay in control',
-    description:
-      'Top up, adjust the rate, or cancel anytime. Unspent funds always come back to you, instantly.',
-  },
-];
+import { getTranslations } from 'next-intl/server';
 
-export function HowItWorks() {
+type Step = { title: string; description: string };
+
+export async function HowItWorks() {
+  const t = await getTranslations('HowItWorks');
+  // Steps are a JSON array, not a single string — t.raw() returns the
+  // message as-is instead of running it through ICU formatting.
+  const steps = t.raw('steps') as Step[];
+
   return (
     <section className="px-6 py-16 sm:px-12">
-      <h2 className="text-2xl font-bold">How it works</h2>
+      <h2 className="text-2xl font-bold">{t('heading')}</h2>
       <ol className="mt-8 grid gap-8 sm:grid-cols-3">
         {steps.map((step, index) => (
           <li key={step.title}>

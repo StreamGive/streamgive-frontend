@@ -58,10 +58,11 @@ export function useNgoRegistryClient(): { client: NgoRegistryClient | null; read
       })
       .catch((err) => {
         if (!cancelled) {
-          showToast(
-            'error',
-            err instanceof Error ? `Couldn't reach the NGO registry contract: ${err.message}` : `Couldn't reach the NGO registry contract.`,
-          );
+          // The error can be a developer-facing message (e.g. a missing
+          // NEXT_PUBLIC_*_CONTRACT_ID env var) that a visitor can't act on —
+          // logged for whoever's debugging the deployment, not shown.
+          console.error('Failed to initialize the NGO registry client:', err);
+          showToast('error', "Couldn't reach the NGO registry contract. Please try again shortly.");
         }
       });
 

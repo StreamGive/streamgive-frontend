@@ -102,10 +102,11 @@ export function useDonationVaultClient(): { client: DonationVaultClient | null; 
       .catch((err) => {
         if (!cancelled && !hasToastedInitError) {
           hasToastedInitError = true;
-          showToast(
-            'error',
-            err instanceof Error ? `Couldn't reach the donation contract: ${err.message}` : `Couldn't reach the donation contract.`,
-          );
+          // The error can be a developer-facing message (e.g. a missing
+          // NEXT_PUBLIC_*_CONTRACT_ID env var) that a donor can't act on —
+          // logged for whoever's debugging the deployment, not shown.
+          console.error('Failed to initialize the donation vault client:', err);
+          showToast('error', "Couldn't reach the donation contract. Please try again shortly.");
         }
       });
 
