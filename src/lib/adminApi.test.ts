@@ -148,7 +148,50 @@ describe('listNgoApplications', () => {
     );
 
     const result = await listNgoApplications(ADDRESS, signMessage);
-    expect(result).toEqual([application]);
+    expect(result.applications).toEqual([application]);
+    expect(result.total).toBe(1);
+    expect(result.limit).toBe(100);
+    expect(result.offset).toBe(0);
+  });
+
+  it('passes offset as a query param when provided', async () => {
+    const { listNgoApplications } = await freshAdminApi();
+    const signMessage = vi.fn().mockResolvedValue('sig');
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ applications: [], total: 50, limit: 20, offset: 20 }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await listNgoApplications(ADDRESS, signMessage, 'PENDING', 20);
+
+    const calledUrl = (fetchMock.mock.calls[0][0] as string);
+    expect(calledUrl).toContain('offset=20');
+    expect(result.total).toBe(50);
+    expect(result.offset).toBe(20);
+  });
+
+  it('omits offset query param when offset is 0', async () => {
+    const { listNgoApplications } = await freshAdminApi();
+    const signMessage = vi.fn().mockResolvedValue('sig');
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ applications: [], total: 0, limit: 100, offset: 0 }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    await listNgoApplications(ADDRESS, signMessage, 'PENDING', 0);
+
+    const calledUrl = (fetchMock.mock.calls[0][0] as string);
+    expect(calledUrl).not.toContain('offset=');
   });
 
   it('includes the status query param when provided', async () => {

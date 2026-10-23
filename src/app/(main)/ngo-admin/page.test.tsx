@@ -148,5 +148,40 @@ describe('NgoAdminPage states', () => {
     expect(streamList).toBeInTheDocument();
     expect(streamList).toHaveTextContent('Streams count: 2');
   });
+
+  it('groups totals by token when streams use two different tokens', async () => {
+    const streams = [
+      makeStream({
+        id: 's1',
+        tokenAddress: 'CNATIVE',
+        balance: '30000000', // 3 XLM
+        withdrawn: '10000000', // 1 XLM
+        status: 'ACTIVE',
+      }),
+      makeStream({
+        id: 's2',
+        tokenAddress: 'CUSDC',
+        balance: '20000000', // 2 USDC
+        withdrawn: '50000000', // 5 USDC
+        status: 'ACTIVE',
+      }),
+    ];
+    getStreams.mockResolvedValue(streams);
+
+    render(<NgoAdminPage />);
+
+    await screen.findByText('Managing streams for Test NGO.');
+
+    // Total withdrawn must show both tokens separately, never summed together.
+    // 1 XLM withdrawn + 5 USDC withdrawn → two labelled figures.
+    const withdrawnCell = screen.getByText('Total withdrawn').closest('div')!;
+    expect(withdrawnCell).toHaveTextContent('1 XLM');
+    expect(withdrawnCell).toHaveTextContent('5 USDC');
+
+    // Remaining balance (both ACTIVE): 3 XLM + 2 USDC.
+    const balanceCell = screen.getByText('Remaining balance').closest('div')!;
+    expect(balanceCell).toHaveTextContent('3 XLM');
+    expect(balanceCell).toHaveTextContent('2 USDC');
+  });
 });
 

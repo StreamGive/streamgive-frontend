@@ -33,6 +33,11 @@ vi.mock('@/components/toast/ToastProvider', () => ({
   useToast: () => ({ showToast: vi.fn() }),
 }));
 
+vi.mock('@/lib/stellar', () => ({
+  getNativeAssetAddress: () => 'CNATIVE',
+  getUsdcAssetAddress: () => 'CUSDC',
+}));
+
 
 vi.mock('@/components/wallet/WalletProvider', () => ({
   useWallet: vi.fn(),
@@ -434,6 +439,52 @@ describe('DashboardPage', () => {
       expect(downloaded[0].download).toBe('streamgive-donations.csv');
       expect(downloaded[0].href).toBe('blob:streamgive-csv');
       expect(revokeObjectURL).toHaveBeenCalledWith('blob:streamgive-csv');
+    });
+  });
+
+  describe('multi-token totals', () => {
+    it('shows each token committed separately and never sums them into one number', async () => {
+      vi.spyOn(WalletProviderMod, 'useWallet').mockReturnValue({
+        address: 'G123',
+        connecting: false,
+        connect: vi.fn(),
+        disconnect: vi.fn(),
+        signTransaction: vi.fn(),
+        signMessage: vi.fn(),
+      });
+
+      // One XLM stream: balance 3, withdrawn 1 → 4 XLM committed.
+      // One USDC stream: balance 2, withdrawn 8 → 10 USDC committed.
+      // The two totals must appear separately, never added together.
+      vi.spyOn(ApiMod, 'getStreams').mockResolvedValue([
+        makeStream({
+          id: 's1',
+          tokenAddress: 'CNATIVE',
+          balance: '30000000',
+          withdrawn: '10000000',
+          status: 'ACTIVE',
+          ngo: { id: 'ngo-1', name: 'XLM NGO', ownerAddress: 'G1' },
+        }),
+        makeStream({
+          id: 's2',
+          tokenAddress: 'CUSDC',
+          balance: '20000000',
+          withdrawn: '80000000',
+          status: 'ACTIVE',
+          ngo: { id: 'ngo-2', name: 'USDC NGO', ownerAddress: 'G2' },
+        }),
+      ]);
+
+      render(<DashboardPage />);
+
+      await waitFor(() => expect(screen.getByText('Total committed')).toBeInTheDocument());
+
+      const committedCell = screen.getByText('Total committed').closest('div')!;
+      // Each token labelled separately.
+      expect(committedCell).toHaveTextContent('4 XLM');
+      expect(committedCell).toHaveTextContent('10 USDC');
+      // Must NOT show a bare cross-token sum like "14".
+      expect(committedCell).not.toHaveTextContent('14');
     });
   });
 

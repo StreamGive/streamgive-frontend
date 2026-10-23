@@ -85,6 +85,10 @@ export const NATIVE_FEE_RESERVE = NATIVE_ACCOUNT_RESERVE + NATIVE_FEE_ESTIMATE;
 const SIMULATION_FEE = '100';
 const SIMULATION_SOURCE_ACCOUNT = 'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
 
+/** How long to wait for a Soroban RPC `simulateTransaction` before giving up.
+ * The SDK doesn't expose a signal parameter, so we race the promise ourselves. */
+const RPC_TIMEOUT_MS = 10_000;
+
 /**
  * Reads a SEP-41 token contract's `balance(id)` for `walletAddress`, via a
  * simulated (never submitted, never signed) contract call.
@@ -123,7 +127,18 @@ export async function getTokenBalance(
     .setTimeout(30)
     .build();
 
-  const simulated = await server.simulateTransaction(tx);
+  // Race the RPC call against a timeout — the SDK doesn't accept an
+  // AbortSignal directly, so we wire one up ourselves. The promise still
+  // settles in the background, but we stop waiting for it.
+  const timeoutSignal = AbortSignal.timeout(RPC_TIMEOUT_MS);
+  const simulated = await Promise.race([
+    server.simulateTransaction(tx),
+    new Promise<never>((_, reject) => {
+      timeoutSignal.addEventListener('abort', () =>
+        reject(new DOMException('RPC balance check timed out', 'TimeoutError')),
+      );
+    }),
+  ]);
   if (rpc.Api.isSimulationError(simulated)) {
     throw new Error(`Failed to simulate balance() for ${tokenAddress}: ${simulated.error}`);
   }
@@ -161,7 +176,17 @@ export async function getTokenDecimals(tokenAddress: string): Promise<number | n
       .setTimeout(30)
       .build();
 
-    const simulated = await server.simulateTransaction(tx);
+    // Race the RPC call against a timeout — same pattern as getTokenBalance.
+    const timeoutSignal = AbortSignal.timeout(RPC_TIMEOUT_MS);
+    const simulated = await Promise.race([
+      server.simulateTransaction(tx),
+      new Promise<never>((_, reject) => {
+        timeoutSignal.addEventListener('abort', () =>
+          reject(new DOMException('RPC decimals check timed out', 'TimeoutError')),
+        );
+      }),
+    ]);
+
     if (rpc.Api.isSimulationError(simulated) || !simulated.result) {
       return null;
     }
