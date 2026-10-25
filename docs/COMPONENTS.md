@@ -39,7 +39,7 @@ src/components/
 │   └── ToastProvider.tsx        — Context provider for transient success/error/info toast notifications.
 └── wallet/
     ├── ConnectWalletButton.tsx — Connect/disconnect button showing the truncated address and a wrong-network warning.
-    └── WalletProvider.tsx      — Context provider wrapping StellarWalletsKit: connection state, signTransaction, signMessage.
+    └── WalletProvider.tsx      — Context provider wrapping StellarWalletsKit: connection state, signTransaction, signMessage (see [wallet support](./WALLET_SUPPORT.md)).
 ```
 
 ## Conventions

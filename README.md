@@ -29,6 +29,9 @@ loading, cache revalidation, polling intervals, and the known 1+N impact
 fetch pattern, and [docs/I18N.md](./docs/I18N.md) for how translations are
 wired up and how to add a language.
 
+See [docs/WALLET_SUPPORT.md](./docs/WALLET_SUPPORT.md) for the default wallet
+adapters and the transaction/message signing coverage verified by this app.
+
 ## Local development
 
 ```
