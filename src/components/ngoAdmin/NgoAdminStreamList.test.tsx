@@ -17,6 +17,9 @@ vi.mock('@/components/wallet/WalletProvider', () => ({
     disconnect: vi.fn(),
     signTransaction: vi.fn(),
     signMessage: vi.fn(),
+    noWalletOptions: null,
+    dismissNoWalletPrompt: vi.fn(),
+    networkMismatch: false,
   }),
 }));
 
@@ -47,7 +50,12 @@ function stream(overrides: Partial<Stream>): Stream {
 
 describe('NgoAdminStreamList', () => {
   beforeEach(() => {
-    vi.mocked(useDonationVaultClient).mockReturnValue({ client: null, ready: false });
+    vi.mocked(useDonationVaultClient).mockReturnValue({
+      client: null,
+      ready: false,
+      initError: null,
+      retryInit: vi.fn(),
+    });
   });
 
   it('renders nothing to filter/sort when there are no streams at all', () => {
