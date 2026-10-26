@@ -457,6 +457,9 @@ describe('DashboardPage', () => {
         disconnect: vi.fn(),
         signTransaction: vi.fn(),
         signMessage: vi.fn(),
+        noWalletOptions: null,
+        dismissNoWalletPrompt: vi.fn(),
+        networkMismatch: false,
       });
 
       // One XLM stream: balance 3, withdrawn 1 → 4 XLM committed.

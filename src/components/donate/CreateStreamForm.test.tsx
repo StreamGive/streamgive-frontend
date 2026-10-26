@@ -76,11 +76,18 @@ describe('CreateStreamForm', () => {
     vi.mocked(useDonationVaultClient).mockReturnValue({
       client: { create_stream: mockCreateStream } as never,
       ready: true,
+      initError: null,
+      retryInit: vi.fn(),
     });
   });
 
   it('disables submit and shows a loading label while the contract client is not ready', async () => {
-    vi.mocked(useDonationVaultClient).mockReturnValue({ client: null, ready: false });
+    vi.mocked(useDonationVaultClient).mockReturnValue({
+      client: null,
+      ready: false,
+      initError: null,
+      retryInit: vi.fn(),
+    });
 
     const user = userEvent.setup();
     render(<CreateStreamForm ngoAddress={NGO_ADDRESS} />);

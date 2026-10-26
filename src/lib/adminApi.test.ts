@@ -91,7 +91,12 @@ describe('admin request signing', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await listNgoApplications(ADDRESS, signMessage, 'PENDING');
-    await expect(listNgoApplications(ADDRESS, signMessage, 'PENDING')).resolves.toEqual([]);
+    await expect(listNgoApplications(ADDRESS, signMessage, 'PENDING')).resolves.toMatchObject({
+      applications: [],
+      total: 0,
+      limit: 100,
+      offset: 0,
+    });
 
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(signMessage).toHaveBeenCalledTimes(2);
@@ -157,7 +162,7 @@ describe('listNgoApplications', () => {
   it('passes offset as a query param when provided', async () => {
     const { listNgoApplications } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(
           JSON.stringify({ applications: [], total: 50, limit: 20, offset: 20 }),
@@ -169,7 +174,7 @@ describe('listNgoApplications', () => {
 
     const result = await listNgoApplications(ADDRESS, signMessage, 'PENDING', 20);
 
-    const calledUrl = (fetchMock.mock.calls[0][0] as string);
+    const calledUrl = String(fetchMock.mock.calls[0]?.[0] ?? '');
     expect(calledUrl).toContain('offset=20');
     expect(result.total).toBe(50);
     expect(result.offset).toBe(20);
@@ -178,7 +183,7 @@ describe('listNgoApplications', () => {
   it('omits offset query param when offset is 0', async () => {
     const { listNgoApplications } = await freshAdminApi();
     const signMessage = vi.fn().mockResolvedValue('sig');
-    const fetchMock = vi.fn(() =>
+    const fetchMock = vi.fn<typeof fetch>(() =>
       Promise.resolve(
         new Response(
           JSON.stringify({ applications: [], total: 0, limit: 100, offset: 0 }),
@@ -190,7 +195,7 @@ describe('listNgoApplications', () => {
 
     await listNgoApplications(ADDRESS, signMessage, 'PENDING', 0);
 
-    const calledUrl = (fetchMock.mock.calls[0][0] as string);
+    const calledUrl = String(fetchMock.mock.calls[0]?.[0] ?? '');
     expect(calledUrl).not.toContain('offset=');
   });
 
@@ -209,7 +214,7 @@ describe('listNgoApplications', () => {
 
     await listNgoApplications(ADDRESS, signMessage, 'APPROVED');
 
-    const calledUrl = (fetchMock.mock.calls[0][0] as string);
+    const calledUrl = String(fetchMock.mock.calls[0]?.[0] ?? '');
     expect(calledUrl).toContain('status=APPROVED');
   });
 
