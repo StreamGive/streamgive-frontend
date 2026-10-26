@@ -29,6 +29,9 @@ loading, cache revalidation, polling intervals, and the known 1+N impact
 fetch pattern, and [docs/I18N.md](./docs/I18N.md) for how translations are
 wired up and how to add a language.
 
+See [docs/adr/README.md](./docs/adr/README.md) for accepted architecture
+decisions and the template for recording new ones.
+
 ## Local development
 
 ```
