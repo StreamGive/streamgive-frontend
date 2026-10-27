@@ -53,3 +53,7 @@ src/components/
 - `WalletProvider` and `ToastProvider` are the only two React contexts in
   the app; both are mounted once near the root layout and consumed via
   their `useWallet()` / `useToast()` hooks.
+- Loading, empty and error states follow
+  [STATE_CONVENTIONS.md](./STATE_CONVENTIONS.md) — match its wording and
+  reuse `RouteLoading`, `RouteError`, `NgoCardSkeleton` and
+  `ConnectWalletPrompt` rather than writing new variants.

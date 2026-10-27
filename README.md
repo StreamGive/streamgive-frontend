@@ -17,7 +17,9 @@ See [docs/COMPONENTS.md](./docs/COMPONENTS.md) for a component tree of
 `src/components/` with a one-line description of each piece,
 [docs/STATE_ARCHITECTURE.md](./docs/STATE_ARCHITECTURE.md) for the app's
 context/state architecture (`WalletProvider`, `ToastProvider`, the
-signature cache), and
+signature cache),
+[docs/STATE_CONVENTIONS.md](./docs/STATE_CONVENTIONS.md) for the loading,
+empty and error state patterns and wording, and
 [docs/CONTRACT_CALLS.md](./docs/CONTRACT_CALLS.md) for a reference mapping
 every Soroban contract method the frontend calls to the UI flow and
 arguments behind it, and
