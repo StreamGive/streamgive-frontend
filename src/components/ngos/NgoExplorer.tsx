@@ -58,6 +58,7 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
   const queryString = searchParams.toString();
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSearchQuery(searchParams.get('q') ?? '');
     setPage(parsePage(searchParams.get('page')));
     setSortBy(parseSort(searchParams.get('sort')));

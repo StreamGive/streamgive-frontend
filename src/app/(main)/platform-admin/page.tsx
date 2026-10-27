@@ -402,7 +402,7 @@ export default function PlatformAdminPage() {
                     {retryApprovingId === app.id && (
                       <div className="flex flex-wrap items-center justify-end gap-2 rounded-md bg-amber-50 p-2 dark:bg-amber-900/20">
                         <span className="text-xs text-amber-900 dark:text-amber-200">
-                          NGO verified on-chain but couldn't mark approved in the system.
+                          NGO verified on-chain but couldn&apos;t mark approved in the system.
                         </span>
                         <button
                           type="button"
