@@ -19,6 +19,9 @@ vi.mock('@/components/wallet/WalletProvider', () => ({
     disconnect: vi.fn(),
     signTransaction: vi.fn(),
     signMessage: vi.fn(),
+    noWalletOptions: null,
+    dismissNoWalletPrompt: vi.fn(),
+    networkMismatch: false,
   }),
 }));
 
@@ -50,6 +53,8 @@ describe('WithdrawButton', () => {
     vi.mocked(useDonationVaultClient).mockReturnValue({
       client: { withdraw, pending_accrual: pendingAccrual } as never,
       ready: true,
+      initError: null,
+      retryInit: vi.fn(),
     });
   });
 
@@ -64,7 +69,12 @@ describe('WithdrawButton', () => {
   });
 
   it('disables the button and shows a loading label while the contract client is not ready', () => {
-    vi.mocked(useDonationVaultClient).mockReturnValue({ client: null, ready: false });
+    vi.mocked(useDonationVaultClient).mockReturnValue({
+      client: null,
+      ready: false,
+      initError: null,
+      retryInit: vi.fn(),
+    });
 
     render(<WithdrawButton streamOnChainId="1" onWithdrawn={vi.fn()} />);
 

@@ -55,6 +55,8 @@ async function freshStellar(networkPassphrase: string) {
 
 afterEach(() => {
   vi.unstubAllEnvs();
+  vi.resetModules();
+  vi.clearAllMocks();
 });
 
 describe('explorerUrl', () => {

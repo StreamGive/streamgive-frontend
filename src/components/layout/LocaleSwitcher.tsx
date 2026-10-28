@@ -3,7 +3,13 @@
 import { useLocale, useTranslations } from 'next-intl';
 import { useRouter } from 'next/navigation';
 
-import { LOCALE_COOKIE, LOCALE_LABELS, LOCALES, type Locale } from '@/i18n/config';
+import {
+  DEFAULT_LOCALE,
+  LOCALE_COOKIE,
+  LOCALE_LABELS,
+  LOCALES,
+  type Locale,
+} from '@/i18n/config';
 
 const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
 
@@ -15,15 +21,39 @@ const COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
  * reads and refreshes the page), it just won't change anything outside
  * those two components yet. See docs/I18N.md.
  */
+function useSafeLocale(): Locale {
+  try {
+    return useLocale() as Locale;
+  } catch {
+    return DEFAULT_LOCALE;
+  }
+}
+
+function useSafeTranslations(namespace: string) {
+  try {
+    return useTranslations(namespace);
+  } catch {
+    return (key: string) => key;
+  }
+}
+
+function useSafeRouter() {
+  try {
+    return useRouter();
+  } catch {
+    return null;
+  }
+}
+
 export function LocaleSwitcher() {
-  const locale = useLocale();
-  const t = useTranslations('LocaleSwitcher');
-  const router = useRouter();
+  const locale = useSafeLocale();
+  const t = useSafeTranslations('LocaleSwitcher');
+  const router = useSafeRouter();
 
   function handleChange(event: React.ChangeEvent<HTMLSelectElement>) {
     const next = event.target.value as Locale;
     document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=${COOKIE_MAX_AGE_SECONDS}`;
-    router.refresh();
+    router?.refresh();
   }
 
   return (

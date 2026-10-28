@@ -214,9 +214,10 @@ is a local contributor check; it does not currently run in CI.
 ## Accessibility checklist
 
 This project has already had a pass of accessibility fixes (color contrast,
-live regions for toasts, accessible names on icon-only buttons). When adding
-or changing interactive UI, check the following before opening a PR so we
-don't regress it:
+live regions for toasts, accessible names on icon-only buttons). For full
+patterns and code examples (modal focus traps, live regions, focus rings),
+see [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md). When adding or changing
+interactive UI, check the following before opening a PR so we don't regress it:
 
 - **Icon-only controls have an accessible name.** A button with only an
   `<svg>`/icon child needs `aria-label` (see

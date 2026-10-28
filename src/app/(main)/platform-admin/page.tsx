@@ -14,6 +14,24 @@ import { formatEstimatedFee, truncateAddress } from '@/lib/format';
 import { useNgoRegistryClient } from '@/lib/ngoRegistryClient';
 import { useLatestRequest } from '@/lib/useLatestRequest';
 
+function normalizeApplicationPage(value: unknown): { applications: NgoApplication[]; total: number; limit: number; offset: number } {
+  if (Array.isArray(value)) {
+    return { applications: value, total: value.length, limit: value.length, offset: 0 };
+  }
+
+  if (value && typeof value === 'object' && Array.isArray((value as { applications?: unknown }).applications)) {
+    const page = value as { applications: NgoApplication[]; total?: number; limit?: number; offset?: number };
+    return {
+      applications: page.applications,
+      total: page.total ?? page.applications.length,
+      limit: page.limit ?? page.applications.length,
+      offset: page.offset ?? 0,
+    };
+  }
+
+  return { applications: [], total: 0, limit: 0, offset: 0 };
+}
+
 export default function PlatformAdminPage() {
   const { address, signMessage } = useWallet();
   const { client, ready, initError, retryInit } = useNgoRegistryClient();
@@ -54,14 +72,15 @@ export default function PlatformAdminPage() {
     setLoading(true);
     setError(null);
     try {
-      const [page, ngos] = await Promise.all([
+      const [pageResult, ngos] = await Promise.all([
         listNgoApplications(address, signMessage, statusFilter),
         getNgos(request.signal),
       ]);
       if (!request.isCurrent()) return;
+      const page = normalizeApplicationPage(pageResult);
       setApplications(page.applications);
       setTotalApplications(page.total);
-      setVerifiedNgos(ngos.filter(n => n.verified));
+      setVerifiedNgos(ngos.filter((n) => n.verified));
     } catch (err) {
       if (!request.isCurrent()) return;
       setError(
@@ -88,7 +107,8 @@ export default function PlatformAdminPage() {
     if (!address) return;
     setLoadingMore(true);
     try {
-      const page = await listNgoApplications(address, signMessage, statusFilter, applications.length);
+      const pageResult = await listNgoApplications(address, signMessage, statusFilter, applications.length);
+      const page = normalizeApplicationPage(pageResult);
       // Append — don't replace — so rows already visible stay put.
       setApplications((prev) => [...prev, ...page.applications]);
       setTotalApplications(page.total);
@@ -382,7 +402,7 @@ export default function PlatformAdminPage() {
                     {retryApprovingId === app.id && (
                       <div className="flex flex-wrap items-center justify-end gap-2 rounded-md bg-amber-50 p-2 dark:bg-amber-900/20">
                         <span className="text-xs text-amber-900 dark:text-amber-200">
-                          NGO verified on-chain but couldn't mark approved in the system.
+                          NGO verified on-chain but couldn&apos;t mark approved in the system.
                         </span>
                         <button
                           type="button"
