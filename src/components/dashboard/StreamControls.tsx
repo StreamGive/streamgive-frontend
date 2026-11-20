@@ -1,5 +1,6 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import { useEffect, useRef, useState } from 'react';
 
 import { useToast } from '@/components/toast/ToastProvider';
@@ -7,7 +8,7 @@ import { useWallet } from '@/components/wallet/WalletProvider';
 import { getStreams, type Stream } from '@/lib/api';
 import { describeContractError } from '@/lib/contractTypes';
 import { useDonationVaultClient } from '@/lib/donationVaultClient';
-import { describeAmountError, formatEstimatedFee, formatRate, parseAmount } from '@/lib/format';
+import { describeAmountError, formatDate, formatEstimatedFee, formatRate, parseAmount } from '@/lib/format';
 import { DURATIONS } from '@/lib/durations';
 import { txToastAction } from '@/lib/stellar';
 
@@ -54,6 +55,7 @@ export function StreamControls({
    */
   onOptimisticUpdate?: (patch: Partial<Stream>) => void;
 }) {
+  const locale = useLocale();
   const { address } = useWallet();
   const { client, ready } = useDonationVaultClient();
   const { showToast } = useToast();
@@ -319,7 +321,7 @@ export function StreamControls({
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400">
           {previewRate !== null
-            ? `${formatRate(previewRate)} per second, ending ${previewEndDate.toLocaleDateString()}.`
+            ? `${formatRate(previewRate)} per second, ending ${formatDate(previewEndDate.toISOString(), locale)}.`
             : 'Remaining balance is too small to stream over this duration — try a shorter one.'}
         </p>
       </div>

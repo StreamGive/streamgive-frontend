@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import PlatformAdminPage from './page';
+import { renderWithLocale as render } from '../../../../test/renderWithLocale';
 
 const ADMIN_ADDRESS = 'G' + 'A'.repeat(55);
 const signMessage = vi.fn();

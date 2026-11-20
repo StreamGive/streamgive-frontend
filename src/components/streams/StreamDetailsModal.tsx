@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useLocale } from 'next-intl';
 import { useEffect, useRef } from 'react';
 
 import { CopyAddressButton } from '@/components/common/CopyAddressButton';
@@ -9,6 +10,7 @@ import { formatDateTime, formatTokenAmount, tokenLabel } from '@/lib/format';
 import { DONATION_VAULT_CONTRACT_ID, explorerUrl } from '@/lib/stellar';
 
 export function StreamDetailsModal({ stream, onClose }: { stream: Stream; onClose: () => void }) {
+  const locale = useLocale();
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -172,11 +174,11 @@ export function StreamDetailsModal({ stream, onClose }: { stream: Stream; onClos
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="text-gray-500 dark:text-gray-400">Created</dt>
-            <dd className="font-medium">{formatDateTime(stream.createdAt)}</dd>
+            <dd className="font-medium">{formatDateTime(stream.createdAt, locale)}</dd>
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="text-gray-500 dark:text-gray-400">Last updated</dt>
-            <dd className="font-medium">{formatDateTime(stream.updatedAt)}</dd>
+            <dd className="font-medium">{formatDateTime(stream.updatedAt, locale)}</dd>
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="text-gray-500 dark:text-gray-400">On-chain ID</dt>

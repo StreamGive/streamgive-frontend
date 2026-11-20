@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE } from '@/i18n/config';
 import { getNativeAssetAddress, getUsdcAssetAddress } from './stellar';
 
 // Every Stellar Asset Contract token (native XLM included) uses 7 decimal
@@ -253,14 +254,36 @@ export function truncateAddress(address: string): string {
   return `${address.slice(0, 4)}…${address.slice(-4)}`;
 }
 
-/** Formats an ISO timestamp as a bare date (no time), in the viewer's own
- * locale and timezone. */
-export function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString();
+// Client pages expose the request locale through <html lang>; server callers
+// pass getLocale() explicitly because a shared utility has no request context.
+function activeLocale(): string {
+  return typeof document !== 'undefined' && document.documentElement.lang
+    ? document.documentElement.lang
+    : DEFAULT_LOCALE;
 }
 
-/** Formats an ISO timestamp as a date and time, in the viewer's own locale
- * and timezone. */
-export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString();
+/** Formats an ISO timestamp as a date in the selected locale and local timezone. */
+export function formatDate(
+  iso: string,
+  locale: string = activeLocale(),
+  options: Intl.DateTimeFormatOptions = {},
+): string {
+  return new Intl.DateTimeFormat(locale, options).format(new Date(iso));
+}
+
+/** Formats an ISO timestamp as a date and time in the selected locale and local timezone. */
+export function formatDateTime(
+  iso: string,
+  locale: string = activeLocale(),
+  options: Intl.DateTimeFormatOptions = {},
+): string {
+  return new Intl.DateTimeFormat(locale, {
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    ...options,
+  }).format(new Date(iso));
 }

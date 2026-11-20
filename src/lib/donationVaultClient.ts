@@ -125,7 +125,6 @@ export function useDonationVaultClient(): {
 
     let cancelled = false;
     // Invalidate the previous signer before fetching the new wallet's client.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setClient(null);
     setInitError(null);
 
@@ -156,7 +155,6 @@ export function useDonationVaultClient(): {
     };
   // retryCount is intentionally included: incrementing it re-runs the effect
   // to retry the Client.from() call after a failure or timeout.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, signTransaction, showToast, retryCount]);
 
   return { client, ready: client !== null, initError, retryInit };

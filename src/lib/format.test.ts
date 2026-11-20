@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { describeAmountError, formatAmountInput, parseAmount, truncateAddress } from './format';
+import {
+  describeAmountError,
+  formatAmountInput,
+  formatDate,
+  formatDateTime,
+  parseAmount,
+  truncateAddress,
+} from './format';
 import { formatAmount, formatTokenAmount, formatTokenTotals } from './format';
 import { formatEstimatedFee, formatRate, formatRemainingDuration } from './format';
 import { getNativeAssetAddress, getUsdcAssetAddress } from './stellar';
@@ -356,6 +363,41 @@ describe('formatAmountInput', () => {
   it('returns 0 for zero or negative values', () => {
     expect(formatAmountInput(0n)).toBe('0');
     expect(formatAmountInput(-500n)).toBe('0');
+  });
+});
+
+describe('date formatting', () => {
+  const timestamp = '2026-01-15T00:30:00.000Z';
+
+  it('uses the selected locale for dates in a fixed time zone', () => {
+    expect(formatDate(timestamp, 'en-US', { timeZone: 'UTC' })).toBe('1/15/2026');
+    expect(formatDate(timestamp, 'es-ES', { timeZone: 'UTC' })).toBe('15/1/2026');
+  });
+
+  it('uses the selected locale for date and time in a fixed time zone', () => {
+    expect(formatDateTime(timestamp, 'en-US', { timeZone: 'UTC' })).toBe(
+      '1/15/2026, 12:30:00 AM',
+    );
+    expect(formatDateTime(timestamp, 'es-ES', { timeZone: 'UTC' })).toBe(
+      '15/1/2026, 0:30:00',
+    );
+  });
+
+  it('respects the requested time zone across a date boundary', () => {
+    expect(formatDate(timestamp, 'en-US', { timeZone: 'America/Los_Angeles' })).toBe('1/14/2026');
+  });
+
+  it('defaults to the active document locale', () => {
+    const previousLocale = document.documentElement.lang;
+    document.documentElement.lang = 'es-ES';
+    try {
+      expect(formatDate(timestamp, undefined, { timeZone: 'UTC' })).toBe('15/1/2026');
+      expect(formatDateTime(timestamp, undefined, { timeZone: 'UTC' })).toBe(
+        '15/1/2026, 0:30:00',
+      );
+    } finally {
+      document.documentElement.lang = previousLocale;
+    }
   });
 });
 

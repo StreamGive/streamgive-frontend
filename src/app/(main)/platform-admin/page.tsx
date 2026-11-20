@@ -1,5 +1,6 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import { useCallback, useEffect, useState } from 'react';
 import type { AssembledTransaction } from '@stellar/stellar-sdk/contract';
 
@@ -10,7 +11,7 @@ import { useWallet } from '@/components/wallet/WalletProvider';
 import type { Ngo, NgoApplication } from '@/lib/api';
 import { getNgos } from '@/lib/api';
 import { listNgoApplications, reviewNgoApplication } from '@/lib/adminApi';
-import { formatEstimatedFee, truncateAddress } from '@/lib/format';
+import { formatDate, formatEstimatedFee, truncateAddress } from '@/lib/format';
 import { useNgoRegistryClient } from '@/lib/ngoRegistryClient';
 import { useLatestRequest } from '@/lib/useLatestRequest';
 
@@ -33,8 +34,9 @@ function normalizeApplicationPage(value: unknown): { applications: NgoApplicatio
 }
 
 export default function PlatformAdminPage() {
+  const locale = useLocale();
   const { address, signMessage } = useWallet();
-  const { client, ready, initError, retryInit } = useNgoRegistryClient();
+  const { client, initError, retryInit } = useNgoRegistryClient();
   const { showToast } = useToast();
   const [applications, setApplications] = useState<NgoApplication[]>([]);
   const [totalApplications, setTotalApplications] = useState(0);
@@ -308,7 +310,7 @@ export default function PlatformAdminPage() {
                     </div>
                     <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                       Submitted{' '}
-                      {new Date(app.createdAt).toLocaleDateString(undefined, {
+                      {formatDate(app.createdAt, locale, {
                         year: 'numeric',
                         month: 'short',
                         day: 'numeric',
@@ -469,7 +471,7 @@ export default function PlatformAdminPage() {
                       </div>
                       <p className="mt-1 text-xs text-gray-600 dark:text-gray-400">
                         Registered{' '}
-                        {new Date(ngo.createdAt).toLocaleDateString(undefined, {
+                        {formatDate(ngo.createdAt, locale, {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric',

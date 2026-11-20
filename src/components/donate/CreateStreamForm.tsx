@@ -1,5 +1,6 @@
 'use client';
 
+import { useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
@@ -12,6 +13,7 @@ import {
   describeAmountError,
   formatAmount,
   formatAmountInput,
+  formatDateTime,
   formatEstimatedFee,
   formatRate,
   parseAmount,
@@ -172,7 +174,6 @@ export function CreateStreamForm({
       return;
     }
     if (!selectedTokenAddress) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTokenDecimals(null);
       setDecimalsLoading(false);
       setDecimalsError(false);
@@ -208,7 +209,6 @@ export function CreateStreamForm({
     if (!address || !selectedTokenAddress) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setWalletBalance(null);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBalanceError(false);
       return;
     }
@@ -611,6 +611,7 @@ function ConfirmDonationSummary({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const locale = useLocale();
   const dialogRef = useRef<HTMLDivElement>(null);
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -716,7 +717,9 @@ function ConfirmDonationSummary({
           </div>
           <div className="flex items-center justify-between gap-4">
             <dt className="text-gray-500 dark:text-gray-400">Ends</dt>
-            <dd className="font-medium">{effectiveEndDate.toLocaleString()}</dd>
+            <dd className="font-medium">
+              {formatDateTime(effectiveEndDate.toISOString(), locale)}
+            </dd>
           </div>
         </dl>
 

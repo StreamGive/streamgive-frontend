@@ -1,10 +1,11 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useDonationVaultClient } from '@/lib/donationVaultClient';
 
 import { CreateStreamForm } from './CreateStreamForm';
+import { renderWithLocale as render } from '../../../test/renderWithLocale';
 
 const DONOR_ADDRESS = 'G' + 'D'.repeat(55);
 const NGO_ADDRESS = 'G' + 'N'.repeat(55);

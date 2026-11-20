@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { getLocale } from 'next-intl/server';
 
 import { CopyLinkButton } from '@/components/common/CopyLinkButton';
 import { DonateQrCode } from '@/components/ngos/DonateQrCode';
@@ -95,9 +96,10 @@ export default async function NgoProfilePage({ params }: Props) {
   // enforced here rather than trusting response order. The limit still
   // keeps the request itself small on NGOs with a long stream history —
   // this only re-sorts whatever page comes back, not the full history.
-  const streams = await getStreams({ ngo: ngo.id, limit: RECENT_STREAMS_LIMIT }).catch(
-    (): Stream[] => [],
-  );
+  const [locale, streams] = await Promise.all([
+    getLocale(),
+    getStreams({ ngo: ngo.id, limit: RECENT_STREAMS_LIMIT }).catch((): Stream[] => []),
+  ]);
   const recentStreams = [...streams].sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
@@ -210,7 +212,7 @@ export default async function NgoProfilePage({ params }: Props) {
                   {stream.status === 'ACTIVE' ? 'Active' : 'Cancelled'}
                 </span>
                 <span className="text-gray-500 dark:text-gray-400">
-                  {formatDate(stream.createdAt)}
+                  {formatDate(stream.createdAt, locale)}
                 </span>
               </li>
             ))}

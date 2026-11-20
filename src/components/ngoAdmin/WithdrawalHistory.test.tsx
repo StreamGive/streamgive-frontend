@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import * as ApiMod from '@/lib/api';
 import type { Withdrawal } from '@/lib/api';
 
 import { WithdrawalHistory } from './WithdrawalHistory';
+import { renderWithLocale as render } from '../../../test/renderWithLocale';
 
 vi.mock('@/lib/api', () => ({
   getWithdrawals: vi.fn(),
@@ -30,7 +31,7 @@ describe('WithdrawalHistory', () => {
 
     expect(await screen.findByText('#42')).toBeInTheDocument();
     expect(screen.getByText('100')).toBeInTheDocument();
-    expect(screen.getByText(new Date('2026-01-15T00:00:00.000Z').toLocaleString())).toBeInTheDocument();
+    expect(screen.getByText(new Date('2026-01-15T00:00:00.000Z').toLocaleString('en'))).toBeInTheDocument();
   });
 
   it('shows an empty state when there are no withdrawals yet', async () => {

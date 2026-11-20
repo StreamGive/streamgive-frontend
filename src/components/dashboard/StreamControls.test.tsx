@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Stream } from '@/lib/api';
 
 import { StreamControls, computeModifyRate } from './StreamControls';
+import { renderWithLocale as render } from '../../../test/renderWithLocale';
 
 const DONOR_ADDRESS = 'G' + 'D'.repeat(55);
 

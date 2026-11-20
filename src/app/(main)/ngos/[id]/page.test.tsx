@@ -35,6 +35,10 @@ vi.mock('@/lib/api', () => ({
   getStreams: vi.fn(async (): Promise<Stream[]> => []),
 }));
 
+vi.mock('next-intl/server', () => ({
+  getLocale: vi.fn(async () => 'en'),
+}));
+
 import NgoProfilePage from './page';
 
 async function renderProfile(ngo: NgoProfile) {

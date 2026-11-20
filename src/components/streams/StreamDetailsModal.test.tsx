@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { Stream } from '@/lib/api';
 
 import { StreamDetailsModal } from './StreamDetailsModal';
+import { renderWithLocale as render } from '../../../test/renderWithLocale';
 
 vi.mock('@/lib/stellar', () => ({
   explorerUrl: vi.fn((type, id) => `https://stellar.expert/${type}/${id}`),

@@ -1,7 +1,12 @@
-import { render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { renderWithLocale as render } from '../../test/renderWithLocale';
 import NotFound from './not-found';
+
+vi.mock('next/navigation', () => ({
+  usePathname: () => '/missing',
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 vi.mock('@/components/wallet/WalletProvider', () => ({
   useWallet: () => ({

@@ -112,7 +112,6 @@ export function ThemeToggle() {
     // the server while restoring the user's saved preference on mount.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setPreference(getStoredPreference());
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
 
     // Cross-tab sync: another tab wrote a new value (or cleared it) in

@@ -1,21 +1,15 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Header } from './Header';
+import { renderWithLocale as render } from '../../../test/renderWithLocale';
 
 const mockUsePathname = vi.fn(() => '/ngos');
 
 vi.mock('next/navigation', () => ({
   usePathname: () => mockUsePathname(),
   useRouter: () => ({ refresh: vi.fn() }),
-}));
-
-// Just enough for LocaleSwitcher (rendered inside Header) to not crash for
-// lack of a real NextIntlClientProvider context.
-vi.mock('next-intl', () => ({
-  useLocale: () => 'en',
-  useTranslations: () => (key: string) => key,
 }));
 
 vi.mock('@/components/wallet/WalletProvider', () => ({
