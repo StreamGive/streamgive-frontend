@@ -1,4 +1,4 @@
-import { screen, fireEvent, within } from '@testing-library/react';
+import { act, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { NgoExplorer } from './NgoExplorer';
@@ -154,6 +154,42 @@ describe('NgoExplorer', () => {
       '/ngos?q=Water&sort=most-committed',
       { scroll: false },
     );
+  });
+
+  it('ignores an older async search response that arrives after the latest search', async () => {
+    let resolveOld: ((ngos: NgoProfile[]) => void) | undefined;
+    let resolveNew: ((ngos: NgoProfile[]) => void) | undefined;
+    const searchNgos = vi.fn((query: string) =>
+      new Promise<NgoProfile[]>((resolve) => {
+        if (query === 'Old') resolveOld = resolve;
+        if (query === 'New') resolveNew = resolve;
+      }),
+    );
+
+    renderWithIntl(
+      <NgoExplorer ngos={buildNgos()} searchNgos={searchNgos} />,
+    );
+
+    fireEvent.change(screen.getByPlaceholderText('Search NGOs by name…'), {
+      target: { value: 'Old' },
+    });
+    await waitFor(() => expect(searchNgos).toHaveBeenCalledWith('Old', expect.any(AbortSignal)));
+
+    fireEvent.change(screen.getByPlaceholderText('Search NGOs by name…'), {
+      target: { value: 'New' },
+    });
+    await waitFor(() => expect(searchNgos).toHaveBeenCalledWith('New', expect.any(AbortSignal)));
+
+    await act(async () => {
+      resolveNew?.([makeNgo({ id: 'new', name: 'New Result' })]);
+    });
+    expect(await screen.findByText('New Result')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveOld?.([makeNgo({ id: 'old', name: 'Old Result' })]);
+    });
+    expect(screen.getByText('New Result')).toBeInTheDocument();
+    expect(screen.queryByText('Old Result')).not.toBeInTheDocument();
   });
 
   it('shows an empty state when the search matches nothing', () => {

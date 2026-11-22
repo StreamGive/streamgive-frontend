@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react';
 
 import type { NgoProfile } from '@/lib/api';
 import { formatAmount } from '@/lib/format';
+import { useLatestRequest } from '@/lib/useLatestRequest';
 
 // Client-side pagination over the already-fetched list — a first step
 // until the backend exposes real pagination (see backend repo).
@@ -47,15 +48,25 @@ function parseSort(value: string | null): SortOption {
   return SORT_OPTIONS.includes(value as SortOption) ? (value as SortOption) : 'newest';
 }
 
-export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
+type NgoSearch = (query: string, signal: AbortSignal) => Promise<NgoProfile[]>;
+
+export function NgoExplorer({
+  ngos,
+  searchNgos,
+}: {
+  ngos: NgoProfile[];
+  searchNgos?: NgoSearch;
+}) {
   const t = useTranslations('Explorer');
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { begin } = useLatestRequest();
 
   const [searchQuery, setSearchQuery] = useState(() => searchParams.get('q') ?? '');
   const [page, setPage] = useState(() => parsePage(searchParams.get('page')));
   const [sortBy, setSortBy] = useState<SortOption>(() => parseSort(searchParams.get('sort')));
+  const [asyncResults, setAsyncResults] = useState<NgoProfile[] | null>(null);
 
   const queryString = searchParams.toString();
 
@@ -65,6 +76,21 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
     setPage(parsePage(searchParams.get('page')));
     setSortBy(parseSort(searchParams.get('sort')));
   }, [queryString, searchParams]);
+
+  useEffect(() => {
+    if (!searchNgos) return;
+
+    const request = begin();
+    void searchNgos(searchQuery.trim(), request.signal)
+      .then((results) => {
+        if (request.isCurrent()) setAsyncResults(results);
+      })
+      .catch(() => {
+        // Keep the existing display if a superseded or failed async search
+        // settles; the latest successful response remains authoritative.
+        if (request.isCurrent()) setAsyncResults(null);
+      });
+  }, [begin, searchQuery, searchNgos]);
 
   const visibleCount = page * PAGE_SIZE;
 
@@ -100,12 +126,14 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
-  if (ngos.length === 0) {
+  const sourceNgos = asyncResults ?? ngos;
+
+  if (sourceNgos.length === 0) {
     return <p className="mt-4 text-gray-600 dark:text-gray-400">{t('noVerifiedNgos')}</p>;
   }
 
   const filteredNgos = sortNgos(
-    ngos.filter((ngo) => ngo.name.toLowerCase().includes(searchQuery.trim().toLowerCase())),
+    sourceNgos.filter((ngo) => ngo.name.toLowerCase().includes(searchQuery.trim().toLowerCase())),
     sortBy,
   );
   const visibleNgos = filteredNgos.slice(0, visibleCount);
@@ -113,6 +141,7 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
 
   function handleSearchChange(value: string): void {
     setSearchQuery(value);
+    setAsyncResults(null);
     setPage(1);
     syncParams({ q: value, page: 1 });
   }
