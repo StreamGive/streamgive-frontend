@@ -11,3 +11,7 @@ export const metadata: Metadata = {
 export default function ImpactLayout({ children }: { children: React.ReactNode }) {
   return children;
 }
+
+const formattedValue = new Intl.NumberFormat(locale, {
+  maximumFractionDigits: 2,
+}).format(value);

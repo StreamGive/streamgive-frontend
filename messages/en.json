@@ -293,3 +293,11 @@
     "contractError10": "Your wallet balance is too low to cover this deposit."
   }
 }
+{
+  "Metadata": {
+    "title": "StreamGive — Transparent Donations for NGOs",
+    "description": "Support trusted NGOs and make a meaningful impact through transparent donations.",
+    "ogTitle": "StreamGive — Give transparently, make an impact",
+    "ogDescription": "Discover NGOs, support meaningful causes, and make transparent donations."
+  }
+}

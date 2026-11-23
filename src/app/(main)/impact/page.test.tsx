@@ -5,6 +5,40 @@ import ImpactPage from './page';
 import { loadPlatformImpact, type PlatformImpact } from '@/lib/impact';
 import { renderWithIntl } from '@/test/renderWithIntl';
 
+export interface LegalDocumentResult {
+  content: string; // or structured sections / component renderer
+  locale: string;
+  isFallback: boolean;
+}
+
+export async function getLegalDocument(
+  docType: "privacy" | "terms",
+  locale: string,
+  defaultLocale = "en",
+): Promise<LegalDocumentResult> {
+  if (locale === defaultLocale) {
+    return {
+      content: await loadLocaleDocument(docType, defaultLocale),
+      locale: defaultLocale,
+      isFallback: false,
+    };
+  }
+
+  const localized = await tryLoadLocaleDocument(docType, locale);
+  if (localized) {
+    return {
+      content: localized,
+      locale,
+      isFallback: false,
+    };
+  }
+
+  return {
+    content: await loadLocaleDocument(docType, defaultLocale),
+    locale: defaultLocale,
+    isFallback: true,
+  };
+}
 // The impact page renders <Header />, which reads the wallet context; give it
 // a signed-out static value the same way Header.test.tsx does.
 vi.mock('@/components/wallet/WalletProvider', () => ({
