@@ -127,7 +127,10 @@
     "daysRemaining": "~{count, plural, one {# day} other {# days}} remaining",
     "viewDetails": "View details",
     "loadMore": "Load more",
-    "endedStreamsSection": "Ended streams ({count})"
+    "endedStreamsSection": "Ended streams ({count})",
+    "tokenLabel": "Token:",
+    "tokenFilterLabel": "Filter by token",
+    "allTokens": "All tokens"
   },
   "StreamControls": {
     "topUpSuccess": "Stream topped up — may take a few seconds to show below.",

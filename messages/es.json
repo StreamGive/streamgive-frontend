@@ -127,7 +127,10 @@
     "daysRemaining": "Quedan ~{count, plural, one {# día} other {# días}}",
     "viewDetails": "Ver detalles",
     "loadMore": "Cargar más",
-    "endedStreamsSection": "Flujos finalizados ({count})"
+    "endedStreamsSection": "Flujos finalizados ({count})",
+    "tokenLabel": "Token:",
+    "tokenFilterLabel": "Filtrar por token",
+    "allTokens": "Todos los tokens"
   },
   "StreamControls": {
     "topUpSuccess": "Flujo recargado. Puede tardar unos segundos en aparecer abajo.",

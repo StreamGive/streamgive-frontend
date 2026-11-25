@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { useId, useState } from 'react';
+import { Suspense, useEffect, useId, useState } from 'react';
 
 import { ConnectWalletPrompt } from '@/components/common/ConnectWalletPrompt';
 import { EndingSoonBadge } from '@/components/dashboard/EndingSoonBadge';
@@ -11,7 +12,7 @@ import { StreamDetailsModal } from '@/components/streams/StreamDetailsModal';
 import { useWallet } from '@/components/wallet/WalletProvider';
 import { type Stream } from '@/lib/api';
 import { buildDonationHistoryCsv } from '@/lib/csv';
-import { formatTokenAmount, formatTokenTotals } from '@/lib/format';
+import { formatTokenAmount, formatTokenTotals, tokenSymbol } from '@/lib/format';
 import { isEndingSoon } from '@/lib/streamEnd';
 import {
   filterStreams,
@@ -113,10 +114,25 @@ function downloadDonationHistoryCsv(streams: Stream[]): void {
 export type { SortOrder };
 
 export default function DashboardPage() {
+  // The token filter reads useSearchParams(), which requires a Suspense
+  // boundary — otherwise it forces the whole route into client-side
+  // rendering.
+  return (
+    <Suspense fallback={null}>
+      <DashboardContent />
+    </Suspense>
+  );
+}
+
+function DashboardContent() {
   const t = useTranslations('Dashboard');
   const { address } = useWallet();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [detailsStream, setDetailsStream] = useState<Stream | null>(null);
   const [filter, setFilter] = useState<StreamFilter>('ALL');
+  const [tokenFilter, setTokenFilter] = useState(() => searchParams.get('token') ?? '');
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
@@ -125,6 +141,13 @@ export default function DashboardPage() {
   const { streams, loading, loadError, refresh } = useDonorStreams(address, (data) =>
     setFilter(initialStreamFilter(data)),
   );
+
+  const searchParamsString = searchParams.toString();
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- keep the token filter in sync with back/forward navigation, same as the explorer
+    setTokenFilter(searchParams.get('token') ?? '');
+  }, [searchParamsString, searchParams]);
 
   const totalCommitted = formatTokenTotals(
     streams.map((s) => ({
@@ -145,7 +168,16 @@ export default function DashboardPage() {
     return t('daysRemaining', { count: Math.floor(seconds / 86400) });
   };
   const trimmedSearchQuery = searchQuery.trim();
-  const filteredStreams = filterStreams(streams, filter, trimmedSearchQuery);
+  // Built from the tokens actually present in the donor's streams, in the
+  // order they first appear, so the filter never offers an empty option.
+  const tokenOptions: string[] = [];
+  const seenTokens = new Set<string>();
+  for (const stream of streams) {
+    if (seenTokens.has(stream.tokenAddress)) continue;
+    seenTokens.add(stream.tokenAddress);
+    tokenOptions.push(stream.tokenAddress);
+  }
+  const filteredStreams = filterStreams(streams, filter, trimmedSearchQuery, tokenFilter);
   const sortedStreams = sortStreams(filteredStreams, sortOrder);
 
   const visibleStreams = sortedStreams.slice(0, visibleCount);
@@ -165,6 +197,22 @@ export default function DashboardPage() {
     if (next === 'CANCELLED') {
       setIsEndedOpen(true);
     }
+  }
+
+  // The token filter is synced to the URL so shared links and back/forward
+  // keep the donor on the same token. router.replace (not push) so changing
+  // it doesn't fill history with one entry per selection.
+  function handleTokenChange(value: string): void {
+    setTokenFilter(value);
+    setVisibleCount(PAGE_SIZE);
+    const params = new URLSearchParams(searchParams.toString());
+    if (value) {
+      params.set('token', value);
+    } else {
+      params.delete('token');
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   }
 
   function handleSearchChange(value: string): void {
@@ -256,34 +304,59 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-b border-gray-200 dark:border-gray-800">
-              <div role="tablist" aria-label={t('filterStreams')} className="flex gap-4">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={filter === 'ALL'}
-                  onClick={() => handleFilterChange('ALL')}
-                  className={`pb-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400 ${filter === 'ALL' ? 'border-b-2 border-black text-black dark:border-white dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-                >
-                  {t('all')}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={filter === 'ACTIVE'}
-                  onClick={() => handleFilterChange('ACTIVE')}
-                  className={`pb-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400 ${filter === 'ACTIVE' ? 'border-b-2 border-black text-black dark:border-white dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-                >
-                  {t('active')}
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={filter === 'CANCELLED'}
-                  onClick={() => handleFilterChange('CANCELLED')}
-                  className={`pb-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400 ${filter === 'CANCELLED' ? 'border-b-2 border-black text-black dark:border-white dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-                >
-                  {t('cancelled')}
-                </button>
+              <div className="flex flex-wrap items-center gap-4">
+                <div role="tablist" aria-label={t('filterStreams')} className="flex gap-4">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={filter === 'ALL'}
+                    onClick={() => handleFilterChange('ALL')}
+                    className={`pb-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400 ${filter === 'ALL' ? 'border-b-2 border-black text-black dark:border-white dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                  >
+                    {t('all')}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={filter === 'ACTIVE'}
+                    onClick={() => handleFilterChange('ACTIVE')}
+                    className={`pb-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400 ${filter === 'ACTIVE' ? 'border-b-2 border-black text-black dark:border-white dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                  >
+                    {t('active')}
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={filter === 'CANCELLED'}
+                    onClick={() => handleFilterChange('CANCELLED')}
+                    className={`pb-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400 ${filter === 'CANCELLED' ? 'border-b-2 border-black text-black dark:border-white dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                  >
+                    {t('cancelled')}
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-2 pb-2">
+                  <label
+                    htmlFor="token-filter"
+                    className="text-sm font-medium text-gray-500 dark:text-gray-400"
+                  >
+                    {t('tokenLabel')}
+                  </label>
+                  <select
+                    id="token-filter"
+                    aria-label={t('tokenFilterLabel')}
+                    value={tokenFilter}
+                    onChange={(event) => handleTokenChange(event.target.value)}
+                    className="rounded-md border border-gray-300 bg-white px-2 py-1 text-sm dark:border-gray-700 dark:bg-gray-900"
+                  >
+                    <option value="">{t('allTokens')}</option>
+                    {tokenOptions.map((token) => (
+                      <option key={token} value={token}>
+                        {tokenSymbol(token)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 pb-2">
