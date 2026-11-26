@@ -16,6 +16,7 @@ Every guide in the repository, with one line on what it covers.
 - [local-backendd](./local-backendd.md): an identical copy of LOCAL_BACKEND.
 - [DEPLOYMENT](./DEPLOYMENT.md): deploy to Vercel or Docker, and the environment variables each needs.
 - [WALLET_TROUBLESHOOTING](./WALLET_TROUBLESHOOTING.md): fixes for common wallet connection problems.
+- [WALLET_SUPPORT_MATRIX](./WALLET_SUPPORT_MATRIX.md): which wallets the kit offers and what has been tested with each.
 
 ## Architecture
 
