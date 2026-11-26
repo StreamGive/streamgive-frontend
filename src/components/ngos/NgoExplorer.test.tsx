@@ -77,6 +77,16 @@ describe('NgoExplorer', () => {
     expect(screen.getByText(noMatch)).toBeInTheDocument();
   });
 
+  it('moves focus to the results list when the skip link is activated', () => {
+    const { container } = renderWithIntl(<NgoExplorer ngos={buildNgos()} />);
+    const skipLink = screen.getByRole('link', { name: 'Skip to results' });
+    expect(skipLink).toHaveAttribute('href', '#ngo-results');
+
+    fireEvent.click(skipLink);
+
+    expect(container.querySelector('#ngo-results')).toHaveFocus();
+  });
+
   it('keeps search results consistent with Load more across more than one page', () => {
     const ngos = buildNgos();
     renderWithIntl(<NgoExplorer ngos={ngos} />);
