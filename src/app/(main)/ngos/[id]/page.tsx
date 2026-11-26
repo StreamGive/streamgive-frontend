@@ -136,9 +136,12 @@ export default async function NgoProfilePage({ params }: Props) {
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-2xl font-bold">{ngo.name}</h1>
           {ngo.verified && (
-            <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800 dark:bg-green-900 dark:text-green-300">
+            <Link
+              href="/verification"
+              className="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-800 hover:underline dark:bg-green-900 dark:text-green-300"
+            >
               {t('verified')}
-            </span>
+            </Link>
           )}
           <ShareButton title={ngo.name} ariaLabel={`Share ${ngo.name}`} />
         </div>

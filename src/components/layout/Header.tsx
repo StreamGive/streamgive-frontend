@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { LocaleSwitcher } from '@/components/layout/LocaleSwitcher';
 import { Logo } from '@/components/layout/Logo';
@@ -79,22 +79,20 @@ export function Header() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Escape and a click outside the open menu both close it — neither does
-  // anything on their own otherwise, unlike choosing a link, which already
-  // closes it via its own onClick. Both paths return focus to the toggle,
-  // since there's nothing else to reasonably land it on once the menu (and
-  // whatever was focused inside it) is gone.
+  // Escape, a click outside the open menu and choosing a link all close it.
+  // Every close path returns focus to the toggle so keyboard and screen-reader
+  // users land back where they opened the menu.
+  const closeMenuAndRefocus = useCallback(() => {
+    setMenuOpen(false);
+    toggleButtonRef.current?.focus();
+  }, []);
+
   useEffect(() => {
     if (!menuOpen) return;
 
-    function closeAndRefocus() {
-      setMenuOpen(false);
-      toggleButtonRef.current?.focus();
-    }
-
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        closeAndRefocus();
+        closeMenuAndRefocus();
       }
     }
 
@@ -102,7 +100,7 @@ export function Header() {
       const target = event.target as Node;
       if (mobileNavRef.current?.contains(target)) return;
       if (toggleButtonRef.current?.contains(target)) return;
-      closeAndRefocus();
+      closeMenuAndRefocus();
     }
 
     document.addEventListener('keydown', handleKeyDown);
@@ -111,7 +109,7 @@ export function Header() {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleMouseDown);
     };
-  }, [menuOpen]);
+  }, [closeMenuAndRefocus, menuOpen]);
 
   return (
     <>
@@ -191,7 +189,7 @@ export function Header() {
                   key={link.href}
                   href={link.href}
                   aria-current={isActive ? 'page' : undefined}
-                  onClick={() => setMenuOpen(false)}
+                  onClick={closeMenuAndRefocus}
                   className={[
                     'rounded-md border-l-2 border-transparent px-2 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 dark:focus-visible:ring-teal-400',
                     isActive

@@ -103,6 +103,13 @@ describe('NgoProfilePage', () => {
     expect(screen.queryByRole('link', { name: /javascript/ })).not.toBeInTheDocument();
   });
 
+  it('links the verified badge to the verification explainer page', async () => {
+    await renderProfile(NGO);
+
+    const badge = screen.getByRole('link', { name: 'Verified' });
+    expect(badge).toHaveAttribute('href', '/verification');
+  });
+
   it('renders a Report this NGO mailto link prefilled with the NGO id', async () => {
     await renderProfile(NGO);
 

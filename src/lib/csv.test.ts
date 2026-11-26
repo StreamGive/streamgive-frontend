@@ -66,6 +66,65 @@ describe('buildDonationHistoryCsv', () => {
       '\uFEFFStream ID,NGO,Token,Status,Committed,Withdrawn,Rate per second,Remaining,Created',
     );
   });
+
+  it('escapes names containing quotes', () => {
+    const csv = buildDonationHistoryCsv([
+      makeStream({ ngo: { id: 'ngo1', name: 'Hope "The Best" NGO', ownerAddress: 'GOWNER' } }),
+    ]);
+    const [, row] = csv.split('\n');
+
+    expect(row).toBe(
+      '1,"Hope ""The Best"" NGO",XLM,Active,0.7 XLM,0.2 XLM,0.00001 XLM,~13 hours remaining,1/15/2026',
+    );
+  });
+
+  it('escapes names containing newlines', () => {
+    const csv = buildDonationHistoryCsv([
+      makeStream({ ngo: { id: 'ngo1', name: 'Hope\nNGO', ownerAddress: 'GOWNER' } }),
+    ]);
+    const [, row] = csv.split('\n');
+
+    expect(row).toBe(
+      '1,"Hope\nNGO",XLM,Active,0.7 XLM,0.2 XLM,0.00001 XLM,~13 hours remaining,1/15/2026',
+    );
+  });
+
+  it('guards names that start with formula prefixes', () => {
+    const csv = buildDonationHistoryCsv([
+      makeStream({ ngo: { id: 'ngo1', name: '=Evil Corp', ownerAddress: 'GOWNER' } }),
+      makeStream({ id: 's2', onChainId: '2', ngo: { id: 'ngo2', name: '+Plus NGO', ownerAddress: 'GOWNER' } }),
+      makeStream({ id: 's3', onChainId: '3', ngo: { id: 'ngo3', name: '-Minus NGO', ownerAddress: 'GOWNER' } }),
+      makeStream({ id: 's4', onChainId: '4', ngo: { id: 'ngo4', name: '@At NGO', ownerAddress: 'GOWNER' } }),
+    ]);
+
+    expect(csv.split('\n')).toEqual([
+      '\uFEFFStream ID,NGO,Token,Status,Committed,Withdrawn,Rate per second,Remaining,Created',
+      "1,'=Evil Corp,XLM,Active,0.7 XLM,0.2 XLM,0.00001 XLM,~13 hours remaining,1/15/2026",
+      "2,'+Plus NGO,XLM,Active,0.7 XLM,0.2 XLM,0.00001 XLM,~13 hours remaining,1/15/2026",
+      "3,'-Minus NGO,XLM,Active,0.7 XLM,0.2 XLM,0.00001 XLM,~13 hours remaining,1/15/2026",
+      "4,'@At NGO,XLM,Active,0.7 XLM,0.2 XLM,0.00001 XLM,~13 hours remaining,1/15/2026",
+    ]);
+  });
+
+  it('handles several thousand rows and asserts the exact output', () => {
+    const streams = Array.from({ length: 3000 }, (_, index) =>
+      makeStream({ id: `s${index + 1}`, onChainId: String(index + 1) }),
+    );
+    const csv = buildDonationHistoryCsv(streams);
+    const lines = csv.split('\n');
+
+    const expectedHeader =
+      '\uFEFFStream ID,NGO,Token,Status,Committed,Withdrawn,Rate per second,Remaining,Created';
+    const expectedRow =
+      ',Test NGO,XLM,Active,0.7 XLM,0.2 XLM,0.00001 XLM,~13 hours remaining,1/15/2026';
+    const expectedLines = [
+      expectedHeader,
+      ...streams.map((stream) => `${stream.onChainId}${expectedRow}`),
+    ];
+
+    expect(lines).toHaveLength(3001);
+    expect(csv).toBe(expectedLines.join('\n'));
+  });
 });
 
 describe('buildWithdrawalHistoryCsv', () => {

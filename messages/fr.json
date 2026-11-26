@@ -95,6 +95,7 @@
     "totalStreams": "{count, plural, one {Flux total} other {Flux totaux}}",
     "totalCommitted": "Total engagé",
     "activeStreams": "{count, plural, one {Flux actif} other {Flux actifs}}",
+    "ngosSupported": "{count, plural, one {ONG soutenue} other {ONG soutenues}}",
     "exportCsv": "Exporter en CSV",
     "filterStreams": "Filtrer les flux",
     "all": "Tous",

@@ -52,7 +52,8 @@
     "privacy": "Privacy",
     "terms": "Terms",
     "accessibility": "Accessibility",
-    "newTabCue": "(opens in a new tab)"
+    "newTabCue": "(opens in a new tab)",
+    "verification": "Verification"
   },
   "WalletButton": {
     "connectWallet": "Connect Wallet",
@@ -95,6 +96,7 @@
     "totalStreams": "{count, plural, one {Total stream} other {Total streams}}",
     "totalCommitted": "Total committed",
     "activeStreams": "{count, plural, one {Active stream} other {Active streams}}",
+    "ngosSupported": "{count, plural, one {NGO supported} other {NGOs supported}}",
     "exportCsv": "Export CSV",
     "filterStreams": "Filter streams",
     "all": "All",
@@ -533,5 +535,37 @@
     "notVerified": "{ngoName} is not yet verified and cannot receive streams at this time.",
     "heading": "Give to {ngoName}",
     "poweredBy": "Powered by StreamGive"
+  },
+  "Verification": {
+    "title": "How NGOs are verified",
+    "description": "A verified badge means StreamGive reviewed the NGO before it could receive donations. Here is what we check and what we do not.",
+    "stepsHeading": "What we check",
+    "steps": [
+      {
+        "title": "Identity",
+        "description": "We confirm the NGO is a real organisation and that the person applying is allowed to act for it."
+      },
+      {
+        "title": "Mission and activities",
+        "description": "We review what the NGO says it does to make sure it is a legitimate charitable cause."
+      },
+      {
+        "title": "Wallet and on-chain registration",
+        "description": "The NGO registers its own Stellar wallet in the on-chain registry. We check that the wallet it will receive donations with matches the application."
+      },
+      {
+        "title": "Admin approval",
+        "description": "A platform admin approves the application on-chain. Only then does the NGO appear in the explorer with a verified badge."
+      }
+    ],
+    "limitsHeading": "What verification does not mean",
+    "limits": [
+      "We do not audit an NGO's finances, spending, or impact.",
+      "A badge is not an endorsement or a promise that a donation will be used in a particular way.",
+      "Verification can be revoked, and it may expire. The profile shows the current status.",
+      "Always do your own research before donating, especially for large amounts."
+    ],
+    "footerNote": "You can report a concern about an NGO from its profile page.",
+    "backToNgos": "Explore verified NGOs"
   }
 }

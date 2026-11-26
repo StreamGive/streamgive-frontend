@@ -49,6 +49,9 @@ export function Footer() {
         <Link href="/faq" className="hover:text-black dark:hover:text-white">
           {t('faq')}
         </Link>
+        <Link href="/verification" className="hover:text-black dark:hover:text-white">
+          {t('verification')}
+        </Link>
         <Link href="/privacy" className="hover:text-black dark:hover:text-white">
           {t('privacy')}
         </Link>

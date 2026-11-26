@@ -40,6 +40,14 @@ describe('Footer', () => {
     expect(faq).not.toHaveAttribute('target');
   });
 
+  it('links to the verification page without a new-tab cue', () => {
+    renderWithIntl(<Footer />);
+
+    const verification = screen.getByRole('link', { name: 'Verification' });
+    expect(verification).toHaveAttribute('href', '/verification');
+    expect(verification).not.toHaveAttribute('target');
+  });
+
   it('links to internal privacy and terms pages without a new-tab cue', () => {
     renderWithIntl(<Footer />);
 

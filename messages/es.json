@@ -52,7 +52,8 @@
     "privacy": "Privacidad",
     "terms": "Términos",
     "accessibility": "Accesibilidad",
-    "newTabCue": "(se abre en una pestaña nueva)"
+    "newTabCue": "(se abre en una pestaña nueva)",
+    "verification": "Verificación"
   },
   "WalletButton": {
     "connectWallet": "Conectar billetera",
@@ -95,6 +96,7 @@
     "totalStreams": "{count, plural, one {Flujo total} other {Flujos totales}}",
     "totalCommitted": "Total comprometido",
     "activeStreams": "{count, plural, one {Flujo activo} other {Flujos activos}}",
+    "ngosSupported": "{count, plural, one {ONG apoyada} other {ONG apoyadas}}",
     "exportCsv": "Exportar CSV",
     "filterStreams": "Filtrar flujos",
     "all": "Todos",
@@ -533,5 +535,37 @@
     "notVerified": "{ngoName} aún no está verificada y no puede recibir flujos por el momento.",
     "heading": "Dona a {ngoName}",
     "poweredBy": "Con tecnología de StreamGive"
+  },
+  "Verification": {
+    "title": "Cómo se verifican las ONG",
+    "description": "La insignia de verificada significa que StreamGive revisó la ONG antes de que pudiera recibir donaciones. Esto es lo que comprobamos y lo que no.",
+    "stepsHeading": "Qué comprobamos",
+    "steps": [
+      {
+        "title": "Identidad",
+        "description": "Confirmamos que la ONG es una organización real y que la persona que solicita el registro puede actuar en su nombre."
+      },
+      {
+        "title": "Misión y actividades",
+        "description": "Revisamos lo que la ONG dice hacer para asegurarnos de que es una causa benéfica legítima."
+      },
+      {
+        "title": "Billetera y registro en la cadena",
+        "description": "La ONG registra su propia billetera de Stellar en el registro en la cadena. Comprobamos que la billetera con la que recibirá donaciones coincide con la solicitud."
+      },
+      {
+        "title": "Aprobación del administrador",
+        "description": "Un administrador de la plataforma aprueba la solicitud en la cadena. Solo entonces la ONG aparece en el explorador con la insignia de verificada."
+      }
+    ],
+    "limitsHeading": "Qué no significa la verificación",
+    "limits": [
+      "No auditamos las finanzas, los gastos ni el impacto de una ONG.",
+      "La insignia no es un respaldo ni una promesa de que una donación se usará de una forma concreta.",
+      "La verificación se puede revocar y puede caducar. El perfil muestra el estado actual.",
+      "Investiga siempre por tu cuenta antes de donar, sobre todo con importes grandes."
+    ],
+    "footerNote": "Puedes informar de un problema con una ONG desde su página de perfil.",
+    "backToNgos": "Explorar ONG verificadas"
   }
 }

@@ -1,7 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { ApiError, getBackendReady, getNgos, getStreams } from './api';
-import { getNgo, getWithdrawals, lookupNgoByAddress, submitNgoApplication } from './api';
+import {
+  ApiError,
+  getApplicationStatus,
+  getBackendReady,
+  getNgo,
+  getNgos,
+  getStreams,
+  getWithdrawals,
+  lookupNgoByAddress,
+  submitNgoApplication,
+} from './api';
 
 // A hung/unreachable backend must surface as a rejected promise rather than
 // resolve to something falsy. AbortSignal.timeout() rejects fetch with a
@@ -375,6 +384,259 @@ describe('submitNgoApplication', () => {
     );
 
     await expect(submitNgoApplication(input)).rejects.toThrow('fetch failed');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Failure-mode suite — covers every failure mode callers rely on
+// ---------------------------------------------------------------------------
+
+/**
+ * Issue #477: a request can fail with a timeout, a 429 with Retry-After,
+ * a 5xx with an HTML body, or a 200 with invalid JSON. Callers rely on
+ * consistent, predictable error types from each case.
+ */
+
+// ── 1. Timeout ───────────────────────────────────────────────────────────────
+// AbortSignal.timeout() fires after API_TIMEOUT_MS. The resulting TimeoutError
+// is a DOMException whose name is "TimeoutError". Callers must receive it as a
+// rejected promise rather than a resolved-but-falsy value.
+describe('failure mode: timeout', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  // Shared: a fetch that only rejects when its AbortSignal fires.
+  function stalledFetch() {
+    return vi.fn((_url: string, options?: { signal?: AbortSignal }) => {
+      return new Promise<Response>((_resolve, reject) => {
+        options?.signal?.addEventListener('abort', () => {
+          reject(options.signal?.reason);
+        });
+      });
+    });
+  }
+
+  it('getNgos rejects with a TimeoutError when the request stalls', async () => {
+    vi.stubGlobal('fetch', stalledFetch());
+    // AbortSignal.timeout(10_000) fires on the real clock. Use a tiny
+    // per-test timeout so the test completes in reasonable time.
+    const tiny = AbortSignal.timeout(50);
+    await expect(getNgos(tiny)).rejects.toMatchObject({ name: 'TimeoutError' });
+  });
+
+  it('getNgo rejects with a TimeoutError when the request stalls', async () => {
+    vi.stubGlobal('fetch', stalledFetch());
+    const tiny = AbortSignal.timeout(50);
+    await expect(getNgo('ngo-1', tiny)).rejects.toMatchObject({ name: 'TimeoutError' });
+  });
+
+  it('getStreams rejects with a TimeoutError when the request stalls', async () => {
+    vi.stubGlobal('fetch', stalledFetch());
+    const tiny = AbortSignal.timeout(50);
+    await expect(getStreams({ donor: 'GABC' }, tiny)).rejects.toMatchObject({ name: 'TimeoutError' });
+  });
+
+  it('getWithdrawals rejects with a TimeoutError when the request stalls', async () => {
+    vi.stubGlobal('fetch', stalledFetch());
+    const tiny = AbortSignal.timeout(50);
+    await expect(getWithdrawals('ngo-1', tiny)).rejects.toMatchObject({ name: 'TimeoutError' });
+  });
+
+  it('submitNgoApplication rejects with a TimeoutError when the request stalls', async () => {
+    vi.stubGlobal('fetch', stalledFetch());
+    const tiny = AbortSignal.timeout(50);
+    // submitNgoApplication calls withTimeout() internally; we pass the tiny
+    // signal via the internal AbortSignal.any([signal, timeout]).
+    // Because the internal timeout is 10 s, drive cancellation via the
+    // stalled-fetch abort path with the signal embedded in fetch options.
+    await expect(
+      submitNgoApplication({
+        ownerAddress: 'GABC',
+        name: 'T',
+        description: 'D',
+        contactEmail: 'a@b.com',
+      }),
+    ).rejects.toMatchObject({ name: expect.stringMatching(/TimeoutError|AbortError/) });
+  }, 15_000);
+});
+
+// ── 2. 429 Too Many Requests with Retry-After ────────────────────────────────
+// The backend rate-limits aggressively. Callers need to know the HTTP status
+// so they can surface a "please wait" message or schedule a retry.
+// Every throwing caller must produce an Error (or ApiError) that includes the
+// 429 status; getBackendReady must silently return false.
+describe('failure mode: 429 with Retry-After', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function rateLimitedResponse() {
+    return new Response(JSON.stringify({ error: 'Too Many Requests' }), {
+      status: 429,
+      headers: {
+        'content-type': 'application/json',
+        'retry-after': '30',
+      },
+    });
+  }
+
+  it('getNgos rejects and the error message includes 429', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(rateLimitedResponse())));
+    await expect(getNgos()).rejects.toThrow(/429/);
+  });
+
+  it('getNgo rejects and the error message includes 429', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(rateLimitedResponse())));
+    await expect(getNgo('ngo-1')).rejects.toThrow(/429/);
+  });
+
+  it('lookupNgoByAddress rejects and the error message includes 429', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(rateLimitedResponse())));
+    await expect(lookupNgoByAddress('GABC')).rejects.toThrow(/429/);
+  });
+
+  it('getStreams rejects and the error message includes 429', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(rateLimitedResponse())));
+    await expect(getStreams({ donor: 'GABC' })).rejects.toThrow(/429/);
+  });
+
+  it('getWithdrawals rejects and the error message includes 429', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(rateLimitedResponse())));
+    await expect(getWithdrawals('ngo-1')).rejects.toThrow(/429/);
+  });
+
+  it('submitNgoApplication throws ApiError with status 429', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(rateLimitedResponse())));
+    const err = await submitNgoApplication({
+      ownerAddress: 'GABC',
+      name: 'T',
+      description: 'D',
+      contactEmail: 'a@b.com',
+    }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(429);
+  });
+
+  it('getApplicationStatus rejects and the error message includes 429', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(rateLimitedResponse())));
+    await expect(getApplicationStatus('GABC')).rejects.toThrow(/429/);
+  });
+
+  it('getBackendReady returns false (does not throw) on a 429', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(rateLimitedResponse())));
+    await expect(getBackendReady()).resolves.toBe(false);
+  });
+});
+
+// ── 3. 5xx with an HTML body ─────────────────────────────────────────────────
+// A proxy, CDN, or crash dumps HTML. The body is not JSON. Callers still need
+// an Error that includes the HTTP status so they can distinguish server errors
+// from network errors.
+describe('failure mode: 5xx with HTML body', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function htmlErrorResponse(status = 502) {
+    return new Response(
+      '<!DOCTYPE html><html><body><h1>Bad Gateway</h1></body></html>',
+      {
+        status,
+        headers: { 'content-type': 'text/html' },
+      },
+    );
+  }
+
+  it('getNgos rejects with an error that includes the HTTP status', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(htmlErrorResponse(502))));
+    await expect(getNgos()).rejects.toThrow(/502/);
+  });
+
+  it('getNgo rejects with an error that includes the HTTP status', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(htmlErrorResponse(503))));
+    await expect(getNgo('ngo-1')).rejects.toThrow(/503/);
+  });
+
+  it('lookupNgoByAddress rejects with an error that includes the HTTP status', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(htmlErrorResponse(500))));
+    await expect(lookupNgoByAddress('GABC')).rejects.toThrow(/500/);
+  });
+
+  it('getStreams rejects with an error that includes the HTTP status', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(htmlErrorResponse(503))));
+    await expect(getStreams({ donor: 'GABC' })).rejects.toThrow(/503/);
+  });
+
+  it('getWithdrawals rejects with an error that includes the HTTP status', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(htmlErrorResponse(500))));
+    await expect(getWithdrawals('ngo-1')).rejects.toThrow(/500/);
+  });
+
+  it('submitNgoApplication throws ApiError with the 5xx status and falls back gracefully', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(htmlErrorResponse(500))));
+    const err = await submitNgoApplication({
+      ownerAddress: 'GABC',
+      name: 'T',
+      description: 'D',
+      contactEmail: 'a@b.com',
+    }).catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(500);
+    // The HTML body is not JSON; readErrorMessage must fall back to the
+    // default message rather than throwing a secondary parse error.
+    expect((err as ApiError).message).toBeTruthy();
+  });
+
+  it('getBackendReady returns false (does not throw) on a 5xx with an HTML body', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(htmlErrorResponse(503))));
+    await expect(getBackendReady()).resolves.toBe(false);
+  });
+});
+
+// ── 4. 200 with invalid JSON ─────────────────────────────────────────────────
+// A proxy cache or feature flag system can respond 200 with a maintenance
+// page. Callers must receive a rejected promise rather than a parse error
+// that surfaces as an unhandled rejection.
+describe('failure mode: 200 with invalid JSON', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  function invalidJsonResponse() {
+    return new Response('<!DOCTYPE html><html><body>Maintenance</body></html>', {
+      status: 200,
+      headers: { 'content-type': 'text/html' },
+    });
+  }
+
+  it('getNgos rejects when the 200 body is not valid JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(invalidJsonResponse())));
+    await expect(getNgos()).rejects.toThrow();
+  });
+
+  it('getNgo rejects when the 200 body is not valid JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(invalidJsonResponse())));
+    await expect(getNgo('ngo-1')).rejects.toThrow();
+  });
+
+  it('lookupNgoByAddress rejects when the 200 body is not valid JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(invalidJsonResponse())));
+    await expect(lookupNgoByAddress('GABC')).rejects.toThrow();
+  });
+
+  it('getStreams rejects when the 200 body is not valid JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(invalidJsonResponse())));
+    await expect(getStreams({ donor: 'GABC' })).rejects.toThrow();
+  });
+
+  it('getWithdrawals rejects when the 200 body is not valid JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(invalidJsonResponse())));
+    await expect(getWithdrawals('ngo-1')).rejects.toThrow();
+  });
+
+  it('getBackendReady returns false (never rejects) when the 200 body is not valid JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(invalidJsonResponse())));
+    // getBackendReady wraps everything in try/catch — it must absorb the
+    // JSON parse error rather than propagating it.
+    await expect(getBackendReady()).resolves.toBe(false);
+  });
+
+  it('getApplicationStatus rejects when the 200 body is not valid JSON', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(invalidJsonResponse())));
+    await expect(getApplicationStatus('GABC')).rejects.toThrow();
   });
 });
 

@@ -120,8 +120,9 @@ describe('Header', () => {
   it('closes the mobile menu when a nav link inside it is clicked', async () => {
     const user = userEvent.setup();
     renderWithIntl(<Header />);
+    const toggle = screen.getByRole('button', { name: 'Toggle menu' });
 
-    await user.click(screen.getByRole('button', { name: 'Toggle menu' }));
+    await user.click(toggle);
     expect(document.getElementById('mobile-nav')).toBeInTheDocument();
 
     const mobileNav = document.getElementById('mobile-nav') as HTMLElement;
@@ -131,6 +132,7 @@ describe('Header', () => {
     await user.click(link!);
 
     expect(document.getElementById('mobile-nav')).not.toBeInTheDocument();
+    expect(toggle).toHaveFocus();
   });
 
   describe('closing the mobile menu', () => {
