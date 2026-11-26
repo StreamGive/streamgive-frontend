@@ -226,18 +226,18 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
                   )}
                 </div>
 
-                <dl className="mt-4 grid grid-cols-3 gap-3">
-                  <div>
+                  <dl className="mt-4 grid grid-cols-3 gap-3 min-w-0">
+                  <div className="min-w-0">
                     <dt className="text-xs text-gray-500 dark:text-gray-400">{t('committed')}</dt>
-                    <dd className="text-sm font-semibold">
+                    <dd className="truncate text-sm font-semibold">
                       {formatAmount(ngo.stats.totalCommitted)}
                     </dd>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <dt className="text-xs text-gray-500 dark:text-gray-400">{t('streams')}</dt>
                     <dd className="text-sm font-semibold">{ngo.stats.activeStreamCount}</dd>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <dt className="text-xs text-gray-500 dark:text-gray-400">{t('donors')}</dt>
                     <dd className="text-sm font-semibold">{ngo.stats.donorCount}</dd>
                   </div>

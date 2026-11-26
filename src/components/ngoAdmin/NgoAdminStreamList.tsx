@@ -116,16 +116,20 @@ export function NgoAdminStreamList({
               key={stream.id}
               className="rounded-lg border border-gray-200 p-6 dark:border-gray-800"
             >
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-mono text-sm">{truncateAddress(stream.donor.address)}</p>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-mono text-sm break-all">{truncateAddress(stream.donor.address)}</p>
                     <CopyAddressButton address={stream.donor.address} />
                   </div>
                   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {stream.status === 'ACTIVE' ? 'Active' : stream.status === 'PAUSED' ? 'Paused' : 'Cancelled'} · Balance{' '}
-                    {formatTokenAmount(stream.balance, stream.tokenAddress)} · Withdrawn{' '}
-                    {formatTokenAmount(stream.withdrawn, stream.tokenAddress)}
+                    {stream.status === 'ACTIVE' ? 'Active' : stream.status === 'PAUSED' ? 'Paused' : 'Cancelled'}
+                  </p>
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                    Balance {formatTokenAmount(stream.balance, stream.tokenAddress)}
+                  </p>
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                    Withdrawn {formatTokenAmount(stream.withdrawn, stream.tokenAddress)}
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-end gap-2">

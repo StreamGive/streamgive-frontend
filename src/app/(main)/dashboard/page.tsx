@@ -276,26 +276,26 @@ function DashboardContent() {
             )}
 
             <div className="flex flex-wrap items-start justify-between gap-4">
-              <dl className="grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-4">
-                <div>
+              <dl className="grid grid-cols-2 gap-6 sm:w-fit sm:grid-cols-4 min-w-0">
+                <div className="min-w-0">
                   <dt className="text-sm text-gray-500 dark:text-gray-400">
                     {t('totalStreams', { count: streams.length })}
                   </dt>
                   <dd className="text-lg font-semibold">{streams.length}</dd>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <dt className="text-sm text-gray-500 dark:text-gray-400">
                     {t('totalCommitted')}
                   </dt>
-                  <dd className="text-lg font-semibold">{totalCommitted}</dd>
+                  <dd className="break-words text-lg font-semibold">{totalCommitted}</dd>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <dt className="text-sm text-gray-500 dark:text-gray-400">
                     {t('activeStreams', { count: activeCount })}
                   </dt>
                   <dd className="text-lg font-semibold">{activeCount}</dd>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <dt className="text-sm text-gray-500 dark:text-gray-400">
                     {t('ngosSupported', { count: ngosSupported })}
                   </dt>
@@ -525,7 +525,11 @@ function StreamCard({
             ) : (
               t(stream.status === 'ACTIVE' ? 'active' : 'cancelled')
             )}{' '}
-            · {t('balance')} <LiveBalance stream={stream} /> · {t('withdrawn')}{' '}
+            · {t('balance')}{' '}
+            <LiveBalance stream={stream} />
+          </p>
+          <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+            {t('withdrawn')}{' '}
             {formatTokenAmount(stream.withdrawn, stream.tokenAddress)}
             {stream.status === 'ACTIVE' && remainingTime(stream)
               ? ` · ${remainingTime(stream)}`

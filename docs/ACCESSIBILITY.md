@@ -272,7 +272,50 @@ if (trigger && !trigger.disabled) {
 
 ---
 
-## Verifying accessibility locally
+## Text resize audit (200 % and 400 % zoom)
+
+WCAG 1.4.4 requires that text can be enlarged to 200 % without loss of content or functionality. The following audit was performed by reviewing each data-heavy page at browser zoom levels of 200 % and 400 % and fixing any clipped or overlapping content.
+
+### Pages reviewed
+
+| Page | Route | 200 % result | 400 % result |
+|------|-------|-------------|-------------|
+| Dashboard | `/dashboard` | ✅ No clipping after fix | ✅ No clipping after fix |
+| NGO Explorer | `/ngos` | ✅ No clipping after fix | ✅ No clipping after fix |
+| Apply form | `/apply` | ✅ No clipping | ✅ No clipping |
+| NGO admin | `/ngo-admin` | ✅ No clipping after fix | ✅ No clipping after fix |
+
+### Issues found and fixed
+
+#### Dashboard — stat summary grid (`src/app/(main)/dashboard/page.tsx`)
+
+**Problem:** The three-column `<dl>` showing total streams, total committed, and active streams used `grid-cols-3` with no `min-w-0` on grid cells. At 200 % zoom the "total committed" token amount (e.g. `1,234.56 USDC`) overflowed its cell and overlapped the neighbouring column.
+
+**Fix:** Added `min-w-0` to each `<div>` cell and `break-words` to the committed amount `<dd>` so the value wraps within its column.
+
+#### Dashboard — stream card status line (`src/app/(main)/dashboard/page.tsx`)
+
+**Problem:** The status, balance, and withdrawn amount were concatenated into a single `<p>` with `·` separators. At 400 % zoom this single line was wider than the viewport on mobile-equivalent layout and ran off-screen without wrapping.
+
+**Fix:** Split balance and withdrawn into a second `<p>` so each wraps independently rather than forming one long unbreakable run.
+
+#### NGO Explorer — NGO card stat grid (`src/components/ngos/NgoExplorer.tsx`)
+
+**Problem:** The committed/streams/donors `grid-cols-3` inside each NGO card had no `min-w-0` on its cells. At 200 % the "committed" value (token amount with currency symbol) overflowed into the adjacent "streams" column.
+
+**Fix:** Added `min-w-0` to each cell and `truncate` to the committed `<dd>` so long amounts clip cleanly within their column instead of overflowing.
+
+#### NGO admin stream list — donor row (`src/components/ngoAdmin/NgoAdminStreamList.tsx`)
+
+**Problem:** Status, balance, and withdrawn were joined into one `<p>` with `·` separators. At 400 % zoom this ran off the right edge of the card. The donor address was displayed with `font-mono` but no `break-all`, so a full-length Stellar address (56 characters) could overflow its container at large zoom.
+
+**Fix:** Split status, balance, and withdrawn into separate `<p>` elements that each wrap independently. Added `break-all` to the donor address. Added `min-w-0` to the left-side `<div>` so the flex layout does not force its content outside the card boundary.
+
+### Pages with no issues
+
+**Apply form (`/apply`):** All form fields use `w-full` inputs inside a `max-w-md` column. The wallet address is already wrapped with `break-all`. The description character counter and error messages reflow correctly at all zoom levels.
+
+
 
 1. **Automated Playwright axe scans**:
    ```bash
