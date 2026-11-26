@@ -10,9 +10,16 @@ export function initialStreamFilter(streams: Stream[]): StreamFilter {
 }
 
 // `query` is expected to be trimmed. An empty query never excludes anything,
-// so clearing the search box naturally clears the filter.
-export function filterStreams(streams: Stream[], filter: StreamFilter, query: string): Stream[] {
+// so clearing the search box naturally clears the filter. `token` is a token
+// contract address; an empty value means "all tokens".
+export function filterStreams(
+  streams: Stream[],
+  filter: StreamFilter,
+  query: string,
+  token = '',
+): Stream[] {
   return streams.filter((s) => {
+    if (token && s.tokenAddress !== token) return false;
     if (filter === 'ACTIVE' && s.status !== 'ACTIVE') return false;
     if (filter === 'CANCELLED' && s.status !== 'CANCELLED') return false;
     if (query && !s.onChainId.includes(query)) return false;

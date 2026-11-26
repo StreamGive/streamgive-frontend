@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -55,7 +55,21 @@ vi.mock('@/components/dashboard/StreamControls', () => ({
   StreamControls: () => null,
 }));
 
+const mockReplace = vi.fn();
+let mockSearchParams = new URLSearchParams();
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ replace: mockReplace }),
+  usePathname: () => '/dashboard',
+  useSearchParams: () => mockSearchParams,
+}));
+
 describe('DashboardPage', () => {
+  beforeEach(() => {
+    mockReplace.mockClear();
+    mockSearchParams = new URLSearchParams();
+  });
+
   function mockConnectedWallet() {
     vi.spyOn(WalletProviderMod, 'useWallet').mockReturnValue({
       address: 'G123',
@@ -980,6 +994,84 @@ describe('DashboardPage', () => {
       expect(endedSection).toHaveAttribute('open');
       expect(screen.getByText('Cancelled NGO')).toBeInTheDocument();
       expect(screen.queryByText('Ongoing NGO')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('token filter', () => {
+    // Cancelled so StreamControls (which needs a ToastProvider/contract
+    // client this test file doesn't set up) never renders, and so the
+    // first-load filter stays on All.
+    const xlmStream = makeStream({
+      id: 'xlm',
+      status: 'CANCELLED',
+      tokenAddress: 'CNATIVE',
+      ngo: { id: 'ngo-xlm', name: 'XLM NGO', ownerAddress: 'GX' },
+    });
+    const usdcStream = makeStream({
+      id: 'usdc',
+      status: 'CANCELLED',
+      tokenAddress: 'CUSDC',
+      ngo: { id: 'ngo-usdc', name: 'USDC NGO', ownerAddress: 'GU' },
+    });
+
+    function mockTokenStreams() {
+      vi.spyOn(ApiMod, 'getStreams').mockResolvedValue([xlmStream, usdcStream]);
+    }
+
+    it('offers only the tokens present in the list', async () => {
+      mockConnectedWallet();
+      mockTokenStreams();
+      renderWithIntl(<DashboardPage />);
+
+      await screen.findByText('XLM NGO');
+
+      const select = screen.getByLabelText('Filter by token');
+      expect(within(select).getAllByRole('option').map((option) => option.textContent)).toEqual([
+        'All tokens',
+        'XLM',
+        'USDC',
+      ]);
+    });
+
+    it('filters the list to the selected token', async () => {
+      mockConnectedWallet();
+      mockTokenStreams();
+      const user = userEvent.setup();
+      renderWithIntl(<DashboardPage />);
+
+      await screen.findByText('XLM NGO');
+
+      await user.selectOptions(screen.getByLabelText('Filter by token'), 'CUSDC');
+
+      expect(screen.getByText('USDC NGO')).toBeInTheDocument();
+      expect(screen.queryByText('XLM NGO')).not.toBeInTheDocument();
+    });
+
+    it('restores the token filter from the URL', async () => {
+      mockConnectedWallet();
+      mockSearchParams = new URLSearchParams('token=CNATIVE');
+      mockTokenStreams();
+      renderWithIntl(<DashboardPage />);
+
+      expect(await screen.findByText('XLM NGO')).toBeInTheDocument();
+      expect(screen.queryByText('USDC NGO')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Filter by token')).toHaveValue('CNATIVE');
+    });
+
+    it('writes the selected token to the URL and clears it for all tokens', async () => {
+      mockConnectedWallet();
+      mockTokenStreams();
+      const user = userEvent.setup();
+      renderWithIntl(<DashboardPage />);
+
+      await screen.findByText('XLM NGO');
+
+      const select = screen.getByLabelText('Filter by token');
+      await user.selectOptions(select, 'CUSDC');
+      expect(mockReplace).toHaveBeenLastCalledWith('/dashboard?token=CUSDC', { scroll: false });
+
+      await user.selectOptions(select, '');
+      expect(mockReplace).toHaveBeenLastCalledWith('/dashboard', { scroll: false });
     });
   });
 
