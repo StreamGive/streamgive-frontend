@@ -184,7 +184,7 @@ describe('ImpactPage error recovery', () => {
   });
 });
 
-describe('ImpactPage hidden tab polling (issue #438)', () => {
+describe('ImpactPage hidden tab polling (issues #438, #473)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.mocked(loadPlatformImpact).mockReset();
@@ -200,22 +200,35 @@ describe('ImpactPage hidden tab polling (issue #438)', () => {
     document.dispatchEvent(new Event('visibilitychange'));
   }
 
-  it('pauses polling while hidden and fetches once when visible again', async () => {
+  it('pauses polling while hidden and fetches once when visible again (issue #473)', async () => {
+    vi.mocked(loadPlatformImpact).mockResolvedValue(IMPACT);
+
+    renderWithIntl(<ImpactPage />);
+    await vi.waitFor(() => expect(loadPlatformImpact).toHaveBeenCalledTimes(1));
+    vi.mocked(loadPlatformImpact).mockClear();
+
+    setVisibility('hidden');
+    await vi.advanceTimersByTimeAsync(5 * POLL_INTERVAL_MS);
+    expect(loadPlatformImpact).not.toHaveBeenCalled();
+
+    setVisibility('visible');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(loadPlatformImpact).toHaveBeenCalledTimes(1);
+  });
+
+  it('restarts the polling interval after the tab becomes visible again', async () => {
     vi.mocked(loadPlatformImpact).mockResolvedValue(IMPACT);
 
     renderWithIntl(<ImpactPage />);
     await vi.waitFor(() => expect(loadPlatformImpact).toHaveBeenCalledTimes(1));
 
     setVisibility('hidden');
-    await vi.advanceTimersByTimeAsync(5 * POLL_INTERVAL_MS);
-    expect(loadPlatformImpact).toHaveBeenCalledTimes(1);
-
     setVisibility('visible');
     await vi.advanceTimersByTimeAsync(0);
-    expect(loadPlatformImpact).toHaveBeenCalledTimes(2);
+    vi.mocked(loadPlatformImpact).mockClear();
 
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS);
-    expect(loadPlatformImpact).toHaveBeenCalledTimes(3);
+    expect(loadPlatformImpact).toHaveBeenCalledTimes(1);
   });
 });
 
