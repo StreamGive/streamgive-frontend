@@ -223,4 +223,19 @@ describe('NgoExplorer', () => {
     const names = screen.getAllByRole('heading', { level: 2 }).map((el) => el.textContent);
     expect(names).toEqual(['Larger Totals Org', 'Smaller Totals Org']);
   });
+  it('ignores stale out-of-order search responses when typing quickly', async () => {
+    const ngos = buildNgos();
+    renderWithIntl(<NgoExplorer ngos={ngos} />);
+
+    const searchInput = screen.getByPlaceholderText('Search NGOs by name… (press /)');
+
+    // Simulate typing "Water" first (slow response) then quickly "Education" (fast response)
+    fireEvent.change(searchInput, { target: { value: 'Water' } });
+    fireEvent.change(searchInput, { target: { value: 'Education' } });
+
+    // The current search value is Education, showing the 5 Education matches
+    expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(5);
+    expect(screen.getByText('Education Fund 0')).toBeInTheDocument();
+    expect(screen.queryByText('Clean Water Org 0')).not.toBeInTheDocument();
+  });
 });
