@@ -202,6 +202,20 @@ describe('THEME_INIT_SCRIPT', () => {
     },
   );
 
+  it.each(['invalid', 'sepia', ''])(
+    'falls back to the system theme for unknown stored value %s',
+    (stored) => {
+      mockSystemTheme(true);
+      localStorage.setItem(THEME_STORAGE_KEY, stored);
+
+      const html = runThemeInitScript();
+
+      expect(html).toHaveClass('dark');
+      expect(html).not.toHaveClass('light');
+      expect(window.matchMedia).toHaveBeenCalledWith('(prefers-color-scheme: dark)');
+    },
+  );
+
   it('does not throw when storage is unavailable before hydration', () => {
     const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('Storage unavailable');
