@@ -61,6 +61,7 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
   const [sortBy, setSortBy] = useState<SortOption>(() => parseSort(searchParams.get('sort')));
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLUListElement>(null);
   const [compareIds, setCompareIds] = useState<string[]>([]);
 
   function toggleCompare(id: string): void {
@@ -165,6 +166,13 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
 
   return (
     <>
+      <a
+        href="#ngo-results"
+        onClick={() => resultsRef.current?.focus()}
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-white focus:px-4 focus:py-2 focus:text-gray-900 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-teal-600 dark:focus:bg-gray-900 dark:focus:text-white dark:focus:ring-teal-400"
+      >
+        {t('skipToResults')}
+      </a>
       <div className="mt-8 flex flex-wrap items-end gap-4">
         <label className="block flex-1 min-w-[200px] max-w-sm">
           <span className="sr-only">{t('searchLabel')}</span>
@@ -210,7 +218,12 @@ export function NgoExplorer({ ngos }: { ngos: NgoProfile[] }) {
           {t('noSearchResults', { query: searchQuery.trim() })}
         </p>
       ) : (
-        <ul className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <ul
+          id="ngo-results"
+          ref={resultsRef}
+          tabIndex={-1}
+          className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {visibleNgos.map((ngo) => (
             <li key={ngo.id}>
               <Link

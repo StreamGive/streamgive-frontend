@@ -203,6 +203,7 @@
     "loadError": "Couldn't load the NGO list. Please check your connection and try again.",
     "retry": "Retry",
     "noVerifiedNgos": "No verified NGOs yet.",
+    "skipToResults": "Skip to results",
     "searchLabel": "Search NGOs by name",
     "searchPlaceholder": "Search NGOs by name… (press /)",
     "sortLabel": "Sort NGOs",

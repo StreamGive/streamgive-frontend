@@ -203,6 +203,7 @@
     "loadError": "No se pudo cargar la lista de ONG. Comprueba tu conexión e inténtalo de nuevo.",
     "retry": "Reintentar",
     "noVerifiedNgos": "Aún no hay ONG verificadas.",
+    "skipToResults": "Ir a los resultados",
     "searchLabel": "Buscar ONG por nombre",
     "searchPlaceholder": "Buscar ONG por nombre… (pulsa /)",
     "sortLabel": "Ordenar ONG",
