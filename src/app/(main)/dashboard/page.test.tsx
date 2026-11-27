@@ -645,6 +645,11 @@ describe('DashboardPage', () => {
           await Promise.resolve();
         });
         expect(getStreamsMock).toHaveBeenCalledTimes(2);
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(30_000);
+        });
+        expect(getStreamsMock).toHaveBeenCalledTimes(3);
       } finally {
         vi.useRealTimers();
       }
