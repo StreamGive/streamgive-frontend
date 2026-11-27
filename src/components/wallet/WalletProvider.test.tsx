@@ -46,13 +46,14 @@ vi.mock('@creit.tech/stellar-wallets-kit/modules/utils', () => ({
   defaultModules: () => [],
 }));
 
-function renderButton() {
+function renderButton(locale: 'en' | 'es' = 'en') {
   return renderWithIntl(
     <ToastProvider>
       <WalletProvider>
         <ConnectWalletButton />
       </WalletProvider>
     </ToastProvider>,
+    locale,
   );
 }
 
@@ -274,6 +275,41 @@ describe('wallet connect flow', () => {
     await user.click(await screen.findByRole('button', { name: /connect wallet/i }));
 
     expect(await screen.findByText('Wallet extension crashed')).toBeInTheDocument();
+  });
+
+  it('explains how to unlock a locked wallet reported by the wallet kit', async () => {
+    mockGetAddress.mockRejectedValue(new Error('not connected'));
+    mockAuthModal.mockRejectedValue({
+      code: -1,
+      message: 'The wallet is locked. Unlock Varial and try again.',
+    });
+
+    const user = userEvent.setup();
+    renderButton();
+
+    await user.click(await screen.findByRole('button', { name: /connect wallet/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /Your wallet is locked.*enter your password.*try connecting again/i,
+    );
+    expect(screen.queryByText(/WALLET_TROUBLESHOOTING/)).not.toBeInTheDocument();
+  });
+
+  it('explains how to unlock a locked wallet in Spanish', async () => {
+    mockGetAddress.mockRejectedValue(new Error('not connected'));
+    mockAuthModal.mockRejectedValue({
+      code: -1,
+      message: 'The wallet is locked. Unlock Varial and try again.',
+    });
+
+    const user = userEvent.setup();
+    renderButton('es');
+
+    await user.click(await screen.findByRole('button', { name: /conectar billetera/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /Tu billetera está bloqueada.*contraseña.*conectarte/i,
+    );
   });
 
   it('forgets the address on disconnect without an SDK call', async () => {

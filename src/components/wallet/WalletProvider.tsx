@@ -1,6 +1,7 @@
 'use client';
 
 import type { Networks } from '@creit.tech/stellar-wallets-kit/types';
+import { useTranslations } from 'next-intl';
 import {
   createContext,
   useCallback,
@@ -113,6 +114,12 @@ function isUserDismissal(err: unknown): boolean {
   );
 }
 
+function isWalletLockedError(err: unknown): boolean {
+  return /wallet.*\blocked\b|\blocked\b.*wallet|unlock (your |the )?wallet/i.test(
+    errorMessage(err),
+  );
+}
+
 const WalletContext = createContext<WalletContextValue | null>(null);
 
 let kitPromise: Promise<WalletKit> | null = null;
@@ -188,6 +195,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [networkMismatch, setNetworkMismatch] = useState(false);
   const [noWalletOptions, setNoWalletOptions] = useState<WalletOption[] | null>(null);
   const { showToast } = useToast();
+  const t = useTranslations('WalletButton');
 
   const dismissNoWalletPrompt = useCallback(() => setNoWalletOptions(null), []);
 
@@ -275,13 +283,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (!isUserDismissal(err)) {
         showToast(
           'error',
-          `${errorMessage(err) || 'Couldn\'t connect your wallet.'} See docs/WALLET_TROUBLESHOOTING.md for fixes.`,
+          isWalletLockedError(err)
+            ? t('lockedWallet')
+            : `${errorMessage(err) || 'Couldn\'t connect your wallet.'} See docs/WALLET_TROUBLESHOOTING.md for fixes.`,
         );
       }
     } finally {
       setConnecting(false);
     }
-  }, [showToast]);
+  }, [showToast, t]);
 
   const disconnect = useCallback(() => {
     // The kit has no app-callable disconnect as of writing — the wallet
