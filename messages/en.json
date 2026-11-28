@@ -63,6 +63,7 @@
     "wrongNetworkHelp": "Your wallet is on a different network. Switch it to {network} before making transactions.",
     "noWalletDetected": "No wallet detected",
     "installWallet": "Install one of these, then try again:",
+    "lockedWallet": "Your wallet is locked. Open your wallet extension, enter your password to unlock it, then try connecting again.",
     "dismiss": "Dismiss"
   },
   "ConnectWalletPrompt": {

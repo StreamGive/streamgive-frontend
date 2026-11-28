@@ -63,6 +63,7 @@
     "wrongNetworkHelp": "Tu billetera está en otra red. Cámbiala a {network} antes de hacer transacciones.",
     "noWalletDetected": "No se detectó ninguna billetera",
     "installWallet": "Instala una de estas opciones y vuelve a intentarlo:",
+    "lockedWallet": "Tu billetera está bloqueada. Abre la extensión de tu billetera, introduce tu contraseña para desbloquearla y vuelve a intentar conectarte.",
     "dismiss": "Cerrar"
   },
   "ConnectWalletPrompt": {
