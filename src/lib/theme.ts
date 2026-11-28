@@ -22,11 +22,12 @@ export const CONTRAST_STORAGE_KEY = 'contrast';
  * Behaviour:
  *   stored === 'dark'  → add class 'dark'
  *   stored === 'light' → add class 'light'
- *   stored === null    → follow prefers-color-scheme (system mode); add
+ *   stored === null or any unknown value
+ *                      → follow prefers-color-scheme (system mode); add
  *                        whichever class matches but do NOT persist it, so
  *                        a future OS-theme change will be respected.
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var s=localStorage.getItem('${THEME_STORAGE_KEY}');var d=s?s==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.add(d?'dark':'light');var c=localStorage.getItem('${CONTRAST_STORAGE_KEY}');if(c==='on'||c==='off')document.documentElement.setAttribute('data-contrast',c);}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{var s=localStorage.getItem('${THEME_STORAGE_KEY}');var d=s==='dark'||(s!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.add(d?'dark':'light');var c=localStorage.getItem('${CONTRAST_STORAGE_KEY}');if(c==='on'||c==='off')document.documentElement.setAttribute('data-contrast',c);}catch(e){}})();`;
 
 /** Returns the stored explicit preference, or 'system' if none is set. */
 export function getStoredPreference(): ThemePreference {

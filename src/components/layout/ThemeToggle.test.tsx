@@ -79,6 +79,16 @@ describe('ThemeToggle', () => {
     },
   );
 
+  it('falls back to system when the stored theme is unknown', () => {
+    mockSystemTheme(true);
+    localStorage.setItem(THEME_STORAGE_KEY, 'sepia');
+
+    renderWithIntl(<ThemeToggle />);
+
+    expect(screen.getByRole('button', { name: 'Switch to light mode' })).toBeInTheDocument();
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe('sepia');
+  });
+
   it('keeps switching themes when storage reads, writes and removals fail', async () => {
     const user = userEvent.setup();
     for (const method of ['getItem', 'setItem', 'removeItem'] as const) {
